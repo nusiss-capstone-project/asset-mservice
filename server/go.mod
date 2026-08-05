@@ -3,8 +3,8 @@ module github.com/nusiss-capstone-project/asset-mservice/server
 go 1.25.10
 
 require (
-	github.com/nusiss-capstone-project/asset-mservice/common v0.0.1
 	github.com/gin-gonic/gin v1.12.0
+	github.com/nusiss-capstone-project/asset-mservice/common v0.0.1
 	github.com/spf13/viper v1.21.0
 	github.com/stretchr/testify v1.11.1
 	github.com/swaggo/files v1.0.1
@@ -101,4 +101,3 @@ require (
 )
 
 replace gopkg.in/yaml.v3 => gopkg.in/yaml.v3 v3.0.1
-
