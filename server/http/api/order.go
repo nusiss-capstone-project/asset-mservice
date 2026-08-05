@@ -91,16 +91,15 @@ func ListOrders(c *gin.Context) {
 	createdTo, _ := strconv.ParseInt(c.Query("created_to"), 10, 64)
 	cursor, _ := strconv.ParseInt(c.Query("cursor"), 10, 64)
 	limit, _ := strconv.Atoi(c.Query("limit"))
-	list, err := service.GetOrderService().ListOrders(
-		c.Request.Context(),
-		userID,
-		c.Query("status"),
-		assetID,
-		createdFrom,
-		createdTo,
-		cursor,
-		limit,
-	)
+	list, err := service.GetOrderService().ListOrders(c.Request.Context(), service.ListOrdersQuery{
+		UserID:      userID,
+		Status:      c.Query("status"),
+		AssetID:     assetID,
+		CreatedFrom: createdFrom,
+		CreatedTo:   createdTo,
+		Cursor:      cursor,
+		Limit:       limit,
+	})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, data.BaseResponse{Code: -1, ErrMsg: err.Error()})
 		return

@@ -35,6 +35,16 @@ type PaymentResultInput struct {
 	Status    string
 }
 
+type ListOrdersQuery struct {
+	UserID      int64
+	Status      string
+	AssetID     int64
+	CreatedFrom int64
+	CreatedTo   int64
+	Cursor      int64
+	Limit       int
+}
+
 type createOrderContext struct {
 	userID          int64
 	idempotencyKey  string
@@ -48,7 +58,7 @@ type createOrderContext struct {
 type OrderService interface {
 	CreateOrder(ctx context.Context, userID int64, req *data.CreateOrderRequest) (*data.OrderVO, error)
 	GetOrderDetail(ctx context.Context, userID, orderID int64) (*data.OrderDetailVO, error)
-	ListOrders(ctx context.Context, userID int64, status string, assetID, createdFrom, createdTo, cursor int64, limit int) (*data.OrderListVO, error)
+	ListOrders(ctx context.Context, query ListOrdersQuery) (*data.OrderListVO, error)
 	HandlePaymentResult(ctx context.Context, in PaymentResultInput) error
 }
 
@@ -264,23 +274,18 @@ func (s *OrderServiceImpl) GetOrderDetail(ctx context.Context, userID, orderID i
 	return vo, nil
 }
 
-func (s *OrderServiceImpl) ListOrders(
-	ctx context.Context,
-	userID int64,
-	status string,
-	assetID, createdFrom, createdTo, cursor int64,
-	limit int,
-) (*data.OrderListVO, error) {
+func (s *OrderServiceImpl) ListOrders(ctx context.Context, query ListOrdersQuery) (*data.OrderListVO, error) {
+	limit := query.Limit
 	if limit <= 0 {
 		limit = 20
 	}
 	orders, err := s.orderDao.ListByCursor(ctx, dao.AssetOrderListFilter{
-		UserID:      userID,
-		Status:      strings.TrimSpace(status),
-		AssetID:     assetID,
-		CreatedFrom: createdFrom,
-		CreatedTo:   createdTo,
-		Cursor:      cursor,
+		UserID:      query.UserID,
+		Status:      strings.TrimSpace(query.Status),
+		AssetID:     query.AssetID,
+		CreatedFrom: query.CreatedFrom,
+		CreatedTo:   query.CreatedTo,
+		Cursor:      query.Cursor,
 		Limit:       limit + 1,
 	})
 	if err != nil {

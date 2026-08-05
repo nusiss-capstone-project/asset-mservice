@@ -386,7 +386,7 @@ func TestListOrders_WithCursor(t *testing.T) {
 	o3 := sampleOrder(1, 1, model.OrderStatusPending)
 	orderDao.On("ListByCursor", mock.Anything, mock.Anything).Return([]*model.AssetOrder{o1, o2, o3}, nil)
 
-	list, err := svc.ListOrders(context.Background(), 1, "", 0, 0, 0, 0, 2)
+	list, err := svc.ListOrders(context.Background(), ListOrdersQuery{UserID: 1, Limit: 2})
 	require.NoError(t, err)
 	require.Len(t, list.Items, 2)
 	require.Equal(t, "2", list.NextCursor)
@@ -397,7 +397,7 @@ func TestListOrders_DefaultLimit(t *testing.T) {
 	orderDao := new(daomocks.AssetOrderDao)
 	svc := newOrderServiceForTest(orderDao, new(daomocks.AssetDao), new(daomocks.UserAssetHoldingDao), new(proxymocks.PaymentProxy), new(producermocks.OrderPaymentResultProducer))
 	orderDao.On("ListByCursor", mock.Anything, mock.Anything).Return([]*model.AssetOrder{}, nil)
-	list, err := svc.ListOrders(context.Background(), 1, "", 0, 0, 0, 0, 0)
+	list, err := svc.ListOrders(context.Background(), ListOrdersQuery{UserID: 1})
 	require.NoError(t, err)
 	require.Empty(t, list.Items)
 }
@@ -407,7 +407,7 @@ func TestListOrders_DAOError(t *testing.T) {
 	orderDao := new(daomocks.AssetOrderDao)
 	svc := newOrderServiceForTest(orderDao, new(daomocks.AssetDao), new(daomocks.UserAssetHoldingDao), new(proxymocks.PaymentProxy), new(producermocks.OrderPaymentResultProducer))
 	orderDao.On("ListByCursor", mock.Anything, mock.Anything).Return(nil, errors.New("db"))
-	_, err := svc.ListOrders(context.Background(), 1, "", 0, 0, 0, 0, 10)
+	_, err := svc.ListOrders(context.Background(), ListOrdersQuery{UserID: 1, Limit: 10})
 	require.Error(t, err)
 }
 
