@@ -43,7 +43,7 @@ func CreateOrder(c *gin.Context) {
 // @Tags Order
 // @Produce json
 // @Param order_id path int true "Order ID"
-// @Success 200 {object} data.BaseResponse{data=data.OrderDetailVO}
+// @Success 200 {object} data.BaseResponse{data=data.OrderVO}
 // @Failure 401 {object} data.BaseResponse
 // @Router /asset-ms/v1/web/orders/{order_id} [get]
 func GetOrder(c *gin.Context) {

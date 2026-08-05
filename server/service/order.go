@@ -57,7 +57,7 @@ type createOrderContext struct {
 
 type OrderService interface {
 	CreateOrder(ctx context.Context, userID int64, req *data.CreateOrderRequest) (*data.OrderVO, error)
-	GetOrderDetail(ctx context.Context, userID, orderID int64) (*data.OrderDetailVO, error)
+	GetOrderDetail(ctx context.Context, userID, orderID int64) (*data.OrderVO, error)
 	ListOrders(ctx context.Context, query ListOrdersQuery) (*data.OrderListVO, error)
 	HandlePaymentResult(ctx context.Context, in PaymentResultInput) error
 }
@@ -237,7 +237,7 @@ func (s *OrderServiceImpl) callCreatePayment(
 	return payResult, nil
 }
 
-func (s *OrderServiceImpl) GetOrderDetail(ctx context.Context, userID, orderID int64) (*data.OrderDetailVO, error) {
+func (s *OrderServiceImpl) GetOrderDetail(ctx context.Context, userID, orderID int64) (*data.OrderVO, error) {
 	order, err := s.orderDao.GetByID(ctx, orderID)
 	if err != nil {
 		log.WithContext(ctx).Errorw("get order by id failed", "order_id", orderID, "error", err)
@@ -251,7 +251,7 @@ func (s *OrderServiceImpl) GetOrderDetail(ctx context.Context, userID, orderID i
 		log.WithContext(ctx).Errorw("get asset by id failed", "order_id", order.ID, "error", err)
 		return nil, err
 	}
-	return toOrderDetailVO(order, asset), nil
+	return toOrderVO(order, asset), nil
 }
 
 func (s *OrderServiceImpl) ListOrders(ctx context.Context, query ListOrdersQuery) (*data.OrderListVO, error) {
@@ -473,26 +473,6 @@ func (s *OrderServiceImpl) toOrderVOWithAsset(ctx context.Context, order *model.
 
 func toOrderVO(o *model.AssetOrder, asset *model.Asset) *data.OrderVO {
 	vo := &data.OrderVO{
-		OrderID:     strconv.FormatInt(o.ID, 10),
-		OrderNo:     o.OrderNo,
-		QuoteID:     o.QuoteID,
-		UnitPrice:   o.UnitPrice,
-		Quantity:    o.Quantity.String(),
-		PayCurrency: o.PayCurrency,
-		PayAmount:   o.PayAmount.String(),
-		PaymentID:   o.PaymentID,
-		Status:      o.Status,
-		CreatedAt:   o.CreatedAt.Unix(),
-		UpdatedAt:   o.UpdatedAt.Unix(),
-	}
-	if asset != nil {
-		vo.Asset = toAssetVO(asset)
-	}
-	return vo
-}
-
-func toOrderDetailVO(o *model.AssetOrder, asset *model.Asset) *data.OrderDetailVO {
-	vo := &data.OrderDetailVO{
 		OrderID:     strconv.FormatInt(o.ID, 10),
 		OrderNo:     o.OrderNo,
 		QuoteID:     o.QuoteID,
