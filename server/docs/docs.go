@@ -15,7 +15,7 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/asset-ms/v1/items": {
+        "/asset-ms/v1/web/items": {
             "post": {
                 "description": "Create an item record.",
                 "consumes": [
@@ -76,6 +76,12 @@ const docTemplate = `{
                             ]
                         }
                     },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/data.BaseResponse"
+                        }
+                    },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
@@ -97,7 +103,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/asset-ms/v1/items/{item_id}": {
+        "/asset-ms/v1/web/items/{item_id}": {
             "get": {
                 "description": "Get item information by item ID.",
                 "tags": [
@@ -116,6 +122,12 @@ const docTemplate = `{
                 "responses": {
                     "200": {
                         "description": "OK"
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/data.BaseResponse"
+                        }
                     }
                 }
             }
