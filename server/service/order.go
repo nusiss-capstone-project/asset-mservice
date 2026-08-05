@@ -57,7 +57,7 @@ type createOrderContext struct {
 
 type OrderService interface {
 	CreateOrder(ctx context.Context, userID int64, req *data.CreateOrderRequest) (*data.OrderVO, error)
-	GetOrderDetail(ctx context.Context, userID, orderID int64) (*data.OrderDetailVO, error)
+	GetOrderDetail(ctx context.Context, userID, orderID int64) (*data.OrderVO, error)
 	ListOrders(ctx context.Context, query ListOrdersQuery) (*data.OrderListVO, error)
 	HandlePaymentResult(ctx context.Context, in PaymentResultInput) error
 }
@@ -94,7 +94,7 @@ func (s *OrderServiceImpl) CreateOrder(ctx context.Context, userID int64, req *d
 		return nil, err
 	}
 	if existing != nil {
-		return toOrderVO(existing), nil
+		return s.toOrderVOWithAsset(ctx, existing), nil
 	}
 
 	order, err := s.buildAndCreateOrder(ctx, prepared)
@@ -121,9 +121,9 @@ func (s *OrderServiceImpl) CreateOrder(ctx context.Context, userID int64, req *d
 		return nil, err
 	}
 	if latest == nil {
-		return toOrderVO(order), nil
+		return s.toOrderVOWithAsset(ctx, order), nil
 	}
-	return toOrderVO(latest), nil
+	return s.toOrderVOWithAsset(ctx, latest), nil
 }
 
 func (s *OrderServiceImpl) validateCreateOrder(
@@ -237,7 +237,7 @@ func (s *OrderServiceImpl) callCreatePayment(
 	return payResult, nil
 }
 
-func (s *OrderServiceImpl) GetOrderDetail(ctx context.Context, userID, orderID int64) (*data.OrderDetailVO, error) {
+func (s *OrderServiceImpl) GetOrderDetail(ctx context.Context, userID, orderID int64) (*data.OrderVO, error) {
 	order, err := s.orderDao.GetByID(ctx, orderID)
 	if err != nil {
 		log.WithContext(ctx).Errorw("get order by id failed", "order_id", orderID, "error", err)
@@ -251,27 +251,7 @@ func (s *OrderServiceImpl) GetOrderDetail(ctx context.Context, userID, orderID i
 		log.WithContext(ctx).Errorw("get asset by id failed", "order_id", order.ID, "error", err)
 		return nil, err
 	}
-	vo := &data.OrderDetailVO{
-		OrderID:     strconv.FormatInt(order.ID, 10),
-		OrderNo:     order.OrderNo,
-		UnitPrice:   order.UnitPrice,
-		Quantity:    order.Quantity.String(),
-		PayCurrency: order.PayCurrency,
-		PayAmount:   order.PayAmount.String(),
-		PaymentID:   order.PaymentID,
-		Status:      order.Status,
-		CreatedAt:   order.CreatedAt.Unix(),
-		UpdatedAt:   order.UpdatedAt.Unix(),
-	}
-	if asset != nil {
-		vo.Asset = data.OrderAssetVO{
-			AssetID: strconv.FormatInt(asset.ID, 10),
-			Name:    asset.Name,
-			Symbol:  asset.Symbol,
-			IconURL: asset.IconURL,
-		}
-	}
-	return vo, nil
+	return toOrderVO(order, asset), nil
 }
 
 func (s *OrderServiceImpl) ListOrders(ctx context.Context, query ListOrdersQuery) (*data.OrderListVO, error) {
@@ -296,9 +276,31 @@ func (s *OrderServiceImpl) ListOrders(ctx context.Context, query ListOrdersQuery
 		nextCursor = strconv.FormatInt(orders[limit-1].ID, 10)
 		orders = orders[:limit]
 	}
+
+	assetIDs := make([]int64, 0, len(orders))
+	seen := make(map[int64]struct{}, len(orders))
+	for _, o := range orders {
+		if _, ok := seen[o.AssetID]; ok {
+			continue
+		}
+		seen[o.AssetID] = struct{}{}
+		assetIDs = append(assetIDs, o.AssetID)
+	}
+	assetMap := make(map[int64]*model.Asset, len(assetIDs))
+	if len(assetIDs) > 0 {
+		assets, err := s.assetDao.GetByIDs(ctx, assetIDs)
+		if err != nil {
+			log.WithContext(ctx).Errorw("list order assets failed", "user_id", query.UserID, "error", err)
+			return nil, err
+		}
+		for _, a := range assets {
+			assetMap[a.ID] = a
+		}
+	}
+
 	items := make([]*data.OrderVO, 0, len(orders))
 	for _, o := range orders {
-		items = append(items, toOrderVO(o))
+		items = append(items, toOrderVO(o, assetMap[o.AssetID]))
 	}
 	return &data.OrderListVO{NextCursor: nextCursor, Items: items}, nil
 }
@@ -456,11 +458,23 @@ func paymentResultFromCreate(orderNo string, result *proxy.CreatePaymentResult) 
 	}
 }
 
-func toOrderVO(o *model.AssetOrder) *data.OrderVO {
-	return &data.OrderVO{
+func (s *OrderServiceImpl) toOrderVOWithAsset(ctx context.Context, order *model.AssetOrder) *data.OrderVO {
+	asset, err := s.assetDao.GetByID(ctx, order.AssetID)
+	if err != nil {
+		log.WithContext(ctx).Warnw("load asset for order vo failed",
+			"order_id", order.ID,
+			"asset_id", order.AssetID,
+			"error", err,
+		)
+		return toOrderVO(order, nil)
+	}
+	return toOrderVO(order, asset)
+}
+
+func toOrderVO(o *model.AssetOrder, asset *model.Asset) *data.OrderVO {
+	vo := &data.OrderVO{
 		OrderID:     strconv.FormatInt(o.ID, 10),
 		OrderNo:     o.OrderNo,
-		AssetID:     strconv.FormatInt(o.AssetID, 10),
 		QuoteID:     o.QuoteID,
 		UnitPrice:   o.UnitPrice,
 		Quantity:    o.Quantity.String(),
@@ -471,6 +485,10 @@ func toOrderVO(o *model.AssetOrder) *data.OrderVO {
 		CreatedAt:   o.CreatedAt.Unix(),
 		UpdatedAt:   o.UpdatedAt.Unix(),
 	}
+	if asset != nil {
+		vo.Asset = toAssetVO(asset)
+	}
+	return vo
 }
 
 func mapPaymentStatus(status string) string {

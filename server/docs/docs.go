@@ -329,7 +329,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/data.OrderDetailVO"
+                                            "$ref": "#/definitions/data.OrderVO"
                                         }
                                     }
                                 }
@@ -538,61 +538,6 @@ const docTemplate = `{
                 }
             }
         },
-        "data.OrderAssetVO": {
-            "type": "object",
-            "properties": {
-                "asset_id": {
-                    "type": "string"
-                },
-                "icon_url": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "symbol": {
-                    "type": "string"
-                }
-            }
-        },
-        "data.OrderDetailVO": {
-            "type": "object",
-            "properties": {
-                "asset": {
-                    "$ref": "#/definitions/data.OrderAssetVO"
-                },
-                "created_at": {
-                    "type": "integer"
-                },
-                "order_id": {
-                    "type": "string"
-                },
-                "order_no": {
-                    "type": "string"
-                },
-                "pay_amount": {
-                    "type": "string"
-                },
-                "pay_currency": {
-                    "type": "string"
-                },
-                "payment_id": {
-                    "type": "string"
-                },
-                "quantity": {
-                    "type": "string"
-                },
-                "status": {
-                    "type": "string"
-                },
-                "unit_price": {
-                    "type": "string"
-                },
-                "updated_at": {
-                    "type": "integer"
-                }
-            }
-        },
         "data.OrderListVO": {
             "type": "object",
             "properties": {
@@ -610,8 +555,8 @@ const docTemplate = `{
         "data.OrderVO": {
             "type": "object",
             "properties": {
-                "asset_id": {
-                    "type": "string"
+                "asset": {
+                    "$ref": "#/definitions/data.AssetVO"
                 },
                 "created_at": {
                     "type": "integer"
