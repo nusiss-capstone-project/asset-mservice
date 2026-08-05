@@ -1,0 +1,38 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: mysql-container
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_DATABASE: __DB_NAME__
+    # Pure memory, disappears when CI ends
+    tmpfs: /var/lib/mysql
+    networks:
+      ci-net:
+        aliases:
+          - mysql-container  
+
+  __TEMPLATE_REPO__:
+    build:
+      context: ../../server
+      dockerfile: Dockerfile
+    container_name: __TEMPLATE_REPO__
+    environment:
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+    depends_on:
+      - mysql
+    networks:
+      - ci-net
+    ports:
+      - "8080:8080"   # 只给宿主机（ZAP）用
+    command: ["sh", "-c", "apk add --no-cache netcat-openbsd && chmod +x /app/wait-for.sh && ./wait-for.sh mysql-container 3306 ./main"]
+    volumes:
+      - ./wait-for.sh:/app/wait-for.sh   # CI 专用配置
+    user: root
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/__SERVICE_SLUG__/v1/ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+networks:
+  ci-net:

@@ -1,0 +1,37 @@
+name: Deploy to Railway
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Deployment target (Railway environment)
+        required: true
+        default: dev
+        type: choice
+        options:
+          - dev
+          - production
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
+      - name: Deploy to Dev
+        if: github.event.inputs.environment == 'dev'
+        run: railway up --detach -e dev --service "${{ env.RAILWAY_SERVICE }}"
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN_DEV }}
+          RAILWAY_SERVICE: ${{ github.event.repository.name }}
+
+      - name: Deploy to Production
+        if: github.event.inputs.environment == 'production'
+        run: railway up --detach -e production --service "${{ env.RAILWAY_SERVICE }}"
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN_PROD }}
+          RAILWAY_SERVICE: ${{ github.event.repository.name }}-prod

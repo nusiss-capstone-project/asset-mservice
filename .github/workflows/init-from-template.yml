@@ -1,0 +1,205 @@
+name: Init from template
+
+# Replaces template placeholders after a new repo is created from this template.
+# Triggers:
+#   - push to main/master (auto, skipped on the canonical template repo)
+#   - workflow_dispatch (manual)
+#   - repository_dispatch (triggered by template repo or external automation)
+
+on:
+  workflow_dispatch:
+    inputs:
+      org:
+        description: GitHub org or user (defaults to repository owner)
+        required: false
+      repo:
+        description: Repository name (defaults to current repository name)
+        required: false
+      go_version:
+        description: Go version
+        required: true
+        default: '1.25.10'
+      service_slug:
+        description: HTTP route prefix, e.g. order-ms (auto-derived if empty)
+        required: false
+      db_name:
+        description: MySQL database name (auto-derived if empty)
+        required: false
+  repository_dispatch:
+    types: [init-from-template]
+  push:
+    branches:
+      - main
+      - master
+
+permissions:
+  contents: write
+
+env:
+  CANONICAL_TEMPLATE_REPO: lianjin/go-mservice-template
+
+concurrency:
+  group: init-from-template-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  detect:
+    runs-on: ubuntu-latest
+    outputs:
+      should_run: ${{ steps.check.outputs.should_run }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check whether initialization is needed
+        id: check
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          if grep -q '__TEMPLATE_ORG__' common/go.mod 2>/dev/null; then
+            echo "placeholders_present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "placeholders_present=false" >> "$GITHUB_OUTPUT"
+            echo "No template placeholders found; skipping."
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [ "${EVENT_NAME}" = "push" ] && [ "${REPOSITORY}" = "${CANONICAL_TEMPLATE_REPO}" ]; then
+            echo "Canonical template repo push; skipping auto-init."
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "should_run=true" >> "$GITHUB_OUTPUT"
+
+  init:
+    needs: detect
+    if: needs.detect.outputs.should_run == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve template variables
+        id: vars
+        env:
+          INPUT_ORG: ${{ github.event.inputs.org }}
+          INPUT_REPO: ${{ github.event.inputs.repo }}
+          INPUT_GO_VERSION: ${{ github.event.inputs.go_version }}
+          INPUT_SERVICE_SLUG: ${{ github.event.inputs.service_slug }}
+          INPUT_DB_NAME: ${{ github.event.inputs.db_name }}
+          CLIENT_ORG: ${{ github.event.client_payload.org }}
+          CLIENT_REPO: ${{ github.event.client_payload.repo }}
+          CLIENT_GO_VERSION: ${{ github.event.client_payload.go_version }}
+          CLIENT_SERVICE_SLUG: ${{ github.event.client_payload.service_slug }}
+          CLIENT_DB_NAME: ${{ github.event.client_payload.db_name }}
+        run: |
+          set -euo pipefail
+
+          org="${INPUT_ORG:-${CLIENT_ORG:-${GITHUB_REPOSITORY_OWNER}}}"
+          repo="${INPUT_REPO:-${CLIENT_REPO:-${GITHUB_REPOSITORY#*/}}}"
+          go_version="${INPUT_GO_VERSION:-${CLIENT_GO_VERSION:-1.25.10}}"
+
+          service_slug="${INPUT_SERVICE_SLUG:-${CLIENT_SERVICE_SLUG:-}}"
+          if [ -z "${service_slug}" ]; then
+            base="${repo%-mservice}"
+            base="${base%-api}"
+            if [[ "${base}" == *-ms ]]; then
+              service_slug="${base}"
+            else
+              service_slug="${base}-ms"
+            fi
+          fi
+
+          db_name="${INPUT_DB_NAME:-${CLIENT_DB_NAME:-}}"
+          if [ -z "${db_name}" ]; then
+            db_name="${service_slug//-/_}_db"
+          fi
+
+          {
+            echo "org=${org}"
+            echo "repo=${repo}"
+            echo "go_version=${go_version}"
+            echo "service_slug=${service_slug}"
+            echo "db_name=${db_name}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Replace template placeholders
+        run: |
+          chmod +x scripts/replace-template-vars.sh
+          ./scripts/replace-template-vars.sh \
+            "${{ steps.vars.outputs.org }}" \
+            "${{ steps.vars.outputs.repo }}" \
+            "${{ steps.vars.outputs.go_version }}" \
+            "${{ steps.vars.outputs.service_slug }}" \
+            "${{ steps.vars.outputs.db_name }}"
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ steps.vars.outputs.go_version }}
+          cache: true
+
+      - name: Tidy common module
+        run: (cd common && go mod tidy)
+
+      - name: Install protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          version: '25.3'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install protoc plugins
+        run: |
+          go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.36.11
+          go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.6.1
+
+      - name: Regenerate protobuf files
+        run: |
+          cd common
+          ./scripts/compile_proto.sh
+
+      - name: Install swag
+        run: go install github.com/swaggo/swag/cmd/swag@v1.16.6
+
+      - name: Regenerate Swagger docs
+        working-directory: server
+        run: swag init
+
+      - name: Publish common module
+        run: |
+          chmod +x scripts/publish-common-module.sh
+          ./scripts/publish-common-module.sh \
+            "${{ steps.vars.outputs.org }}" \
+            "${{ steps.vars.outputs.repo }}" \
+            "v0.0.1"
+
+      - name: Link client and server to common
+        run: |
+          chmod +x scripts/link-common-module.sh
+          ./scripts/link-common-module.sh \
+            "${{ steps.vars.outputs.org }}" \
+            "${{ steps.vars.outputs.repo }}" \
+            "v0.0.1"
+
+      - name: Finalize repository
+        run: |
+          chmod +x scripts/finalize-init.sh
+          ./scripts/finalize-init.sh "${{ env.CANONICAL_TEMPLATE_REPO }}" "${{ github.repository }}"
+
+      - name: Commit initialized project
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+          git commit -m "chore: initialize microservice from template
+
+          org: ${{ steps.vars.outputs.org }}
+          repo: ${{ steps.vars.outputs.repo }}
+          go_version: ${{ steps.vars.outputs.go_version }}
+          service_slug: ${{ steps.vars.outputs.service_slug }}"
+          git push

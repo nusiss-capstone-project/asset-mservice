@@ -1,0 +1,19 @@
+grpc:
+  host: "0.0.0.0"
+  port: 5001
+  connect_timeout: 3
+  max_pool_size: 200
+
+http:
+  host: "0.0.0.0"
+  port: 8080
+
+log:
+  level: debug
+  file_path: ./logs/__TEMPLATE_REPO__.log
+
+system:
+  allowed_origins: 
+  - https://campaign-center-admin-web.vercel.app
+  - https://finverse-web.vercel.app
+  - http://localhost:3000

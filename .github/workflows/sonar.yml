@@ -1,0 +1,54 @@
+name: SonarQube
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  sonarqube:
+    name: SonarQube
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Detect Sonar configuration
+        id: sonar
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+        run: |
+          if [ -n "${SONAR_TOKEN}" ] && [ -n "${SONAR_HOST_URL}" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Set up Go
+        if: steps.sonar.outputs.enabled == 'true'
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: server/go.mod
+      - name: Run tests with coverage
+        if: steps.sonar.outputs.enabled == 'true'
+        run: |
+          cd server
+          go test -coverprofile=coverage.out ./...
+      - name: SonarQube Scan
+        if: steps.sonar.outputs.enabled == 'true'
+        uses: SonarSource/sonarqube-scan-action@v6.0.0
+        env:
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          args: >-
+            -Dsonar.projectKey=${{ github.repository_owner }}_${{ github.event.repository.name }}
+            -Dsonar.sources=server/service
+            -Dsonar.go.coverage.reportPaths=server/coverage.out
+            -Dsonar.exclusions=**/mock/**
+            -Dsonar.coverage.exclusions=**/mock/**
