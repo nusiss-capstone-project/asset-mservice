@@ -19,7 +19,7 @@ definitions:
 info:
   contact: {}
 paths:
-  /asset-ms/v1/items:
+  /asset-ms/v1/web/items:
     post:
       consumes:
       - application/json
@@ -52,6 +52,10 @@ paths:
                 data:
                   type: string
               type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/data.BaseResponse'
         "500":
           description: Internal Server Error
           schema:
@@ -64,7 +68,7 @@ paths:
       summary: Item Create
       tags:
       - Item
-  /asset-ms/v1/items/{item_id}:
+  /asset-ms/v1/web/items/{item_id}:
     get:
       description: Get item information by item ID.
       parameters:
@@ -76,6 +80,10 @@ paths:
       responses:
         "200":
           description: OK
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/data.BaseResponse'
       summary: Item Query with ID
       tags:
       - Item

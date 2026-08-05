@@ -19,8 +19,9 @@ import (
 // @Param user body data.ItemVO true "Item information"
 // @Success 200	{object} data.BaseResponse{data=data.ItemVO}
 // @Failure 400 {object} data.BaseResponse{data=string}
+// @Failure 401 {object} data.BaseResponse
 // @Failure 500 {object} data.BaseResponse{data=string}
-// @Router /asset-ms/v1/items [post]
+// @Router /asset-ms/v1/web/items [post]
 func CreateItem(c *gin.Context) {
 	item := &data.ItemVO{}
 	if err := c.ShouldBindJSON(&item); err != nil {
@@ -42,7 +43,8 @@ func CreateItem(c *gin.Context) {
 // @Tags Item
 // @Param item_id path int true "Item.ID"
 // @Success 200
-// @Router /asset-ms/v1/items/{item_id} [get]
+// @Failure 401 {object} data.BaseResponse
+// @Router /asset-ms/v1/web/items/{item_id} [get]
 func GetItems(c *gin.Context) {
 	itemId := c.Param("item_id")
 	itemIdInt, err := strconv.Atoi(itemId)
