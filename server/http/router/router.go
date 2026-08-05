@@ -40,9 +40,15 @@ func NewRouter() *gin.Engine {
 			})
 		})
 		webGroup := basicGroup.Group("/web")
+		auth := commonauth.RequireUser()
 
-		webGroup.POST("/items", commonauth.RequireUser(), api.CreateItem)
-		webGroup.GET("/items/:item_id", commonauth.RequireUser(), api.GetItems)
+		webGroup.GET("/assets", auth, api.ListAssets)
+		webGroup.GET("/assets/:asset_id", auth, api.GetAsset)
+		webGroup.POST("/quotes", auth, api.GenQuote)
+		webGroup.POST("/orders", auth, api.CreateOrder)
+		webGroup.GET("/orders", auth, api.ListOrders)
+		webGroup.GET("/orders/:order_id", auth, api.GetOrder)
+		webGroup.GET("/holdings", auth, api.ListHoldings)
 	}
 	return r
 }

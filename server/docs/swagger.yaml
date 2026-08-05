@@ -1,4 +1,25 @@
 definitions:
+  data.AssetVO:
+    properties:
+      created_at:
+        type: integer
+      currency:
+        type: string
+      current_price:
+        type: string
+      icon_url:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      status:
+        type: string
+      symbol:
+        type: string
+      updated_at:
+        type: integer
+    type: object
   data.BaseResponse:
     properties:
       code:
@@ -7,30 +28,169 @@ definitions:
       err_msg:
         type: string
     type: object
-  data.ItemVO:
+  data.CreateOrderRequest:
     properties:
-      id:
+      idempotency_key:
+        type: string
+      payment_method_id:
         type: integer
-      name:
+      quantity:
+        type: string
+      quote_id:
         type: string
     required:
-    - name
+    - idempotency_key
+    - payment_method_id
+    - quantity
+    - quote_id
+    type: object
+  data.GenQuoteRequest:
+    properties:
+      asset_id:
+        type: string
+      currency:
+        type: string
+    required:
+    - asset_id
+    type: object
+  data.HoldingAssetVO:
+    properties:
+      icon_url:
+        type: string
+      name:
+        type: string
+      symbol:
+        type: string
+    type: object
+  data.HoldingListVO:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/data.HoldingVO'
+        type: array
+    type: object
+  data.HoldingVO:
+    properties:
+      asset:
+        $ref: '#/definitions/data.HoldingAssetVO'
+      asset_id:
+        type: string
+      quantity:
+        type: string
+      updated_at:
+        type: integer
+      valuation:
+        $ref: '#/definitions/data.HoldingValuationVO'
+    type: object
+  data.HoldingValuationVO:
+    properties:
+      amount:
+        type: string
+      currency:
+        type: string
+      unit_price:
+        type: string
+    type: object
+  data.OrderAssetVO:
+    properties:
+      asset_id:
+        type: string
+      icon_url:
+        type: string
+      name:
+        type: string
+      symbol:
+        type: string
+    type: object
+  data.OrderDetailVO:
+    properties:
+      asset:
+        $ref: '#/definitions/data.OrderAssetVO'
+      created_at:
+        type: integer
+      order_id:
+        type: string
+      order_no:
+        type: string
+      pay_amount:
+        type: string
+      pay_currency:
+        type: string
+      payment_id:
+        type: string
+      quantity:
+        type: string
+      status:
+        type: string
+      unit_price:
+        type: string
+      updated_at:
+        type: integer
+    type: object
+  data.OrderListVO:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/data.OrderVO'
+        type: array
+      next_cursor:
+        type: string
+    type: object
+  data.OrderVO:
+    properties:
+      asset_id:
+        type: string
+      created_at:
+        type: integer
+      order_id:
+        type: string
+      order_no:
+        type: string
+      pay_amount:
+        type: string
+      pay_currency:
+        type: string
+      payment_id:
+        type: string
+      quantity:
+        type: string
+      quote_id:
+        type: string
+      status:
+        type: string
+      unit_price:
+        type: string
+      updated_at:
+        type: integer
+    type: object
+  data.QuoteVO:
+    properties:
+      asset_id:
+        type: string
+      currency:
+        type: string
+      expires_at:
+        type: integer
+      quote_id:
+        type: string
+      unit_price:
+        type: string
     type: object
 info:
   contact: {}
 paths:
-  /asset-ms/v1/web/items:
-    post:
-      consumes:
-      - application/json
-      description: Create an item record.
+  /asset-ms/v1/web/assets:
+    get:
       parameters:
-      - description: Item information
-        in: body
-        name: user
-        required: true
-        schema:
-          $ref: '#/definitions/data.ItemVO'
+      - default: USD
+        description: Currency
+        in: query
+        name: currency
+        type: string
+      - description: Status active|inactive
+        in: query
+        name: status
+        type: string
       produces:
       - application/json
       responses:
@@ -41,50 +201,210 @@ paths:
             - $ref: '#/definitions/data.BaseResponse'
             - properties:
                 data:
-                  $ref: '#/definitions/data.ItemVO'
-              type: object
-        "400":
-          description: Bad Request
-          schema:
-            allOf:
-            - $ref: '#/definitions/data.BaseResponse'
-            - properties:
-                data:
-                  type: string
+                  items:
+                    $ref: '#/definitions/data.AssetVO'
+                  type: array
               type: object
         "401":
           description: Unauthorized
           schema:
             $ref: '#/definitions/data.BaseResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            allOf:
-            - $ref: '#/definitions/data.BaseResponse'
-            - properties:
-                data:
-                  type: string
-              type: object
-      summary: Item Create
+      summary: List assets
       tags:
-      - Item
-  /asset-ms/v1/web/items/{item_id}:
+      - Asset
+  /asset-ms/v1/web/assets/{asset_id}:
     get:
-      description: Get item information by item ID.
       parameters:
-      - description: Item.ID
+      - description: Asset ID
         in: path
-        name: item_id
+        name: asset_id
         required: true
         type: integer
+      - default: USD
+        description: Currency
+        in: query
+        name: currency
+        type: string
+      produces:
+      - application/json
       responses:
         "200":
           description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/data.BaseResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/data.AssetVO'
+              type: object
         "401":
           description: Unauthorized
           schema:
             $ref: '#/definitions/data.BaseResponse'
-      summary: Item Query with ID
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/data.BaseResponse'
+      summary: Get asset detail
       tags:
-      - Item
+      - Asset
+  /asset-ms/v1/web/holdings:
+    get:
+      parameters:
+      - description: Asset ID
+        in: query
+        name: asset_id
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/data.BaseResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/data.HoldingListVO'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/data.BaseResponse'
+      summary: List holdings
+      tags:
+      - Holding
+  /asset-ms/v1/web/orders:
+    get:
+      parameters:
+      - description: pending|pay_succeed|pay_fail
+        in: query
+        name: status
+        type: string
+      - description: Asset ID
+        in: query
+        name: asset_id
+        type: integer
+      - description: Unix timestamp
+        in: query
+        name: created_from
+        type: integer
+      - description: Unix timestamp
+        in: query
+        name: created_to
+        type: integer
+      - description: Last seen order_id
+        in: query
+        name: cursor
+        type: string
+      - default: 20
+        description: Page size
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/data.BaseResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/data.OrderListVO'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/data.BaseResponse'
+      summary: List orders
+      tags:
+      - Order
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Order request
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/data.CreateOrderRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/data.BaseResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/data.OrderVO'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/data.BaseResponse'
+      summary: Create order
+      tags:
+      - Order
+  /asset-ms/v1/web/orders/{order_id}:
+    get:
+      parameters:
+      - description: Order ID
+        in: path
+        name: order_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/data.BaseResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/data.OrderDetailVO'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/data.BaseResponse'
+      summary: Get order detail
+      tags:
+      - Order
+  /asset-ms/v1/web/quotes:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Quote request
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/data.GenQuoteRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/data.BaseResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/data.QuoteVO'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/data.BaseResponse'
+      summary: Generate quote
+      tags:
+      - Quote
 swagger: "2.0"

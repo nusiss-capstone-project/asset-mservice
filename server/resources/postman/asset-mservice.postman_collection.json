@@ -1,0 +1,233 @@
+{
+  "info": {
+    "_postman_id": "a1b2c3d4-e5f6-7890-abcd-asset-mservice01",
+    "name": "asset-mservice",
+    "description": "Local/dev collection for asset-mservice web APIs.\n\nAuth uses identity middleware headers:\n- X-Internal-User-Id\n- X-User-Role (must be `user`)\n\nSuggested flow: Ping → List Assets → Gen Quote → Create Order → Order Detail / List → Holdings.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080" },
+    { "key": "userId", "value": "1" },
+    { "key": "userRole", "value": "user" },
+    { "key": "assetId", "value": "1" },
+    { "key": "currency", "value": "USD" },
+    { "key": "quoteId", "value": "" },
+    { "key": "orderId", "value": "" },
+    { "key": "paymentMethodId", "value": "1" },
+    { "key": "quantity", "value": "0.01" },
+    { "key": "idempotencyKey", "value": "postman-{{$timestamp}}" }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Ping",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/asset-ms/v1/ping"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Assets",
+      "item": [
+        {
+          "name": "List Assets",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const body = pm.response.json();",
+                  "  const items = body.data || [];",
+                  "  if (items.length > 0 && items[0].id) {",
+                  "    pm.collectionVariables.set('assetId', String(items[0].id));",
+                  "  }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "X-Internal-User-Id", "value": "{{userId}}" },
+              { "key": "X-User-Role", "value": "{{userRole}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/asset-ms/v1/web/assets?currency={{currency}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["asset-ms", "v1", "web", "assets"],
+              "query": [
+                { "key": "currency", "value": "{{currency}}" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Asset Detail",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "X-Internal-User-Id", "value": "{{userId}}" },
+              { "key": "X-User-Role", "value": "{{userRole}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/asset-ms/v1/web/assets/{{assetId}}?currency={{currency}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["asset-ms", "v1", "web", "assets", "{{assetId}}"],
+              "query": [
+                { "key": "currency", "value": "{{currency}}" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Quotes",
+      "item": [
+        {
+          "name": "Gen Quote",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const body = pm.response.json();",
+                  "  if (body.data && body.data.quote_id) {",
+                  "    pm.collectionVariables.set('quoteId', body.data.quote_id);",
+                  "  }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Internal-User-Id", "value": "{{userId}}" },
+              { "key": "X-User-Role", "value": "{{userRole}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"asset_id\": \"{{assetId}}\",\n  \"currency\": \"{{currency}}\"\n}"
+            },
+            "url": "{{baseUrl}}/asset-ms/v1/web/quotes"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Orders",
+      "item": [
+        {
+          "name": "Create Order",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('idempotencyKey', 'postman-' + Date.now());"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const body = pm.response.json();",
+                  "  if (body.data && body.data.order_id) {",
+                  "    pm.collectionVariables.set('orderId', body.data.order_id);",
+                  "  }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Internal-User-Id", "value": "{{userId}}" },
+              { "key": "X-User-Role", "value": "{{userRole}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quote_id\": \"{{quoteId}}\",\n  \"quantity\": \"{{quantity}}\",\n  \"payment_method_id\": {{paymentMethodId}},\n  \"idempotency_key\": \"{{idempotencyKey}}\"\n}"
+            },
+            "url": "{{baseUrl}}/asset-ms/v1/web/orders"
+          }
+        },
+        {
+          "name": "Get Order Detail",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "X-Internal-User-Id", "value": "{{userId}}" },
+              { "key": "X-User-Role", "value": "{{userRole}}" }
+            ],
+            "url": "{{baseUrl}}/asset-ms/v1/web/orders/{{orderId}}"
+          }
+        },
+        {
+          "name": "List Orders",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "X-Internal-User-Id", "value": "{{userId}}" },
+              { "key": "X-User-Role", "value": "{{userRole}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/asset-ms/v1/web/orders?limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["asset-ms", "v1", "web", "orders"],
+              "query": [
+                { "key": "status", "value": "pay_succeed", "disabled": true },
+                { "key": "asset_id", "value": "{{assetId}}", "disabled": true },
+                { "key": "created_from", "value": "", "disabled": true },
+                { "key": "created_to", "value": "", "disabled": true },
+                { "key": "cursor", "value": "", "disabled": true },
+                { "key": "limit", "value": "20" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Holdings",
+      "item": [
+        {
+          "name": "List Holdings",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "X-Internal-User-Id", "value": "{{userId}}" },
+              { "key": "X-User-Role", "value": "{{userRole}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/asset-ms/v1/web/holdings",
+              "host": ["{{baseUrl}}"],
+              "path": ["asset-ms", "v1", "web", "holdings"],
+              "query": [
+                { "key": "asset_id", "value": "{{assetId}}", "disabled": true }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

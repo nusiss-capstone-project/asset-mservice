@@ -15,9 +15,241 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/asset-ms/v1/web/items": {
+        "/asset-ms/v1/web/assets": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Asset"
+                ],
+                "summary": "List assets",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "default": "USD",
+                        "description": "Currency",
+                        "name": "currency",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Status active|inactive",
+                        "name": "status",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/data.BaseResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/data.AssetVO"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/data.BaseResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/asset-ms/v1/web/assets/{asset_id}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Asset"
+                ],
+                "summary": "Get asset detail",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Asset ID",
+                        "name": "asset_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "default": "USD",
+                        "description": "Currency",
+                        "name": "currency",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/data.BaseResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/data.AssetVO"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/data.BaseResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/data.BaseResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/asset-ms/v1/web/holdings": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Holding"
+                ],
+                "summary": "List holdings",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Asset ID",
+                        "name": "asset_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/data.BaseResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/data.HoldingListVO"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/data.BaseResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/asset-ms/v1/web/orders": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Order"
+                ],
+                "summary": "List orders",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "pending|pay_succeed|pay_fail",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Asset ID",
+                        "name": "asset_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Unix timestamp",
+                        "name": "created_from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Unix timestamp",
+                        "name": "created_to",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Last seen order_id",
+                        "name": "cursor",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Page size",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/data.BaseResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/data.OrderListVO"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/data.BaseResponse"
+                        }
+                    }
+                }
+            },
             "post": {
-                "description": "Create an item record.",
                 "consumes": [
                     "application/json"
                 ],
@@ -25,17 +257,17 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Item"
+                    "Order"
                 ],
-                "summary": "Item Create",
+                "summary": "Create order",
                 "parameters": [
                     {
-                        "description": "Item information",
-                        "name": "user",
+                        "description": "Order request",
+                        "name": "body",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/data.ItemVO"
+                            "$ref": "#/definitions/data.CreateOrderRequest"
                         }
                     }
                 ],
@@ -51,25 +283,7 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/data.ItemVO"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/data.BaseResponse"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "type": "string"
+                                            "$ref": "#/definitions/data.OrderVO"
                                         }
                                     }
                                 }
@@ -81,9 +295,31 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/data.BaseResponse"
                         }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
+                    }
+                }
+            }
+        },
+        "/asset-ms/v1/web/orders/{order_id}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Order"
+                ],
+                "summary": "Get order detail",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Order ID",
+                        "name": "order_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
                         "schema": {
                             "allOf": [
                                 {
@@ -93,35 +329,63 @@ const docTemplate = `{
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "type": "string"
+                                            "$ref": "#/definitions/data.OrderDetailVO"
                                         }
                                     }
                                 }
                             ]
                         }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/data.BaseResponse"
+                        }
                     }
                 }
             }
         },
-        "/asset-ms/v1/web/items/{item_id}": {
-            "get": {
-                "description": "Get item information by item ID.",
-                "tags": [
-                    "Item"
+        "/asset-ms/v1/web/quotes": {
+            "post": {
+                "consumes": [
+                    "application/json"
                 ],
-                "summary": "Item Query with ID",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Quote"
+                ],
+                "summary": "Generate quote",
                 "parameters": [
                     {
-                        "type": "integer",
-                        "description": "Item.ID",
-                        "name": "item_id",
-                        "in": "path",
-                        "required": true
+                        "description": "Quote request",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/data.GenQuoteRequest"
+                        }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK"
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/data.BaseResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/data.QuoteVO"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
                     },
                     "401": {
                         "description": "Unauthorized",
@@ -134,6 +398,38 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "data.AssetVO": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "integer"
+                },
+                "currency": {
+                    "type": "string"
+                },
+                "current_price": {
+                    "type": "string"
+                },
+                "icon_url": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "symbol": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "integer"
+                }
+            }
+        },
         "data.BaseResponse": {
             "type": "object",
             "properties": {
@@ -146,16 +442,228 @@ const docTemplate = `{
                 }
             }
         },
-        "data.ItemVO": {
+        "data.CreateOrderRequest": {
             "type": "object",
             "required": [
-                "name"
+                "idempotency_key",
+                "payment_method_id",
+                "quantity",
+                "quote_id"
             ],
             "properties": {
-                "id": {
+                "idempotency_key": {
+                    "type": "string"
+                },
+                "payment_method_id": {
                     "type": "integer"
                 },
+                "quantity": {
+                    "type": "string"
+                },
+                "quote_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "data.GenQuoteRequest": {
+            "type": "object",
+            "required": [
+                "asset_id"
+            ],
+            "properties": {
+                "asset_id": {
+                    "type": "string"
+                },
+                "currency": {
+                    "type": "string"
+                }
+            }
+        },
+        "data.HoldingAssetVO": {
+            "type": "object",
+            "properties": {
+                "icon_url": {
+                    "type": "string"
+                },
                 "name": {
+                    "type": "string"
+                },
+                "symbol": {
+                    "type": "string"
+                }
+            }
+        },
+        "data.HoldingListVO": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/data.HoldingVO"
+                    }
+                }
+            }
+        },
+        "data.HoldingVO": {
+            "type": "object",
+            "properties": {
+                "asset": {
+                    "$ref": "#/definitions/data.HoldingAssetVO"
+                },
+                "asset_id": {
+                    "type": "string"
+                },
+                "quantity": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "integer"
+                },
+                "valuation": {
+                    "$ref": "#/definitions/data.HoldingValuationVO"
+                }
+            }
+        },
+        "data.HoldingValuationVO": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "string"
+                },
+                "currency": {
+                    "type": "string"
+                },
+                "unit_price": {
+                    "type": "string"
+                }
+            }
+        },
+        "data.OrderAssetVO": {
+            "type": "object",
+            "properties": {
+                "asset_id": {
+                    "type": "string"
+                },
+                "icon_url": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "symbol": {
+                    "type": "string"
+                }
+            }
+        },
+        "data.OrderDetailVO": {
+            "type": "object",
+            "properties": {
+                "asset": {
+                    "$ref": "#/definitions/data.OrderAssetVO"
+                },
+                "created_at": {
+                    "type": "integer"
+                },
+                "order_id": {
+                    "type": "string"
+                },
+                "order_no": {
+                    "type": "string"
+                },
+                "pay_amount": {
+                    "type": "string"
+                },
+                "pay_currency": {
+                    "type": "string"
+                },
+                "payment_id": {
+                    "type": "string"
+                },
+                "quantity": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "unit_price": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "integer"
+                }
+            }
+        },
+        "data.OrderListVO": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/data.OrderVO"
+                    }
+                },
+                "next_cursor": {
+                    "type": "string"
+                }
+            }
+        },
+        "data.OrderVO": {
+            "type": "object",
+            "properties": {
+                "asset_id": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "integer"
+                },
+                "order_id": {
+                    "type": "string"
+                },
+                "order_no": {
+                    "type": "string"
+                },
+                "pay_amount": {
+                    "type": "string"
+                },
+                "pay_currency": {
+                    "type": "string"
+                },
+                "payment_id": {
+                    "type": "string"
+                },
+                "quantity": {
+                    "type": "string"
+                },
+                "quote_id": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "unit_price": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "integer"
+                }
+            }
+        },
+        "data.QuoteVO": {
+            "type": "object",
+            "properties": {
+                "asset_id": {
+                    "type": "string"
+                },
+                "currency": {
+                    "type": "string"
+                },
+                "expires_at": {
+                    "type": "integer"
+                },
+                "quote_id": {
+                    "type": "string"
+                },
+                "unit_price": {
                     "type": "string"
                 }
             }
