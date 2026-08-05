@@ -387,6 +387,18 @@ func TestGetOrderDetail_DAOError(t *testing.T) {
 	require.Error(t, err)
 }
 
+func TestGetOrderDetail_AssetDAOError(t *testing.T) {
+	initServiceTestEnv(t)
+	orderDao := new(daomocks.AssetOrderDao)
+	assetDao := new(daomocks.AssetDao)
+	svc := newOrderServiceForTest(orderDao, assetDao, new(daomocks.UserAssetHoldingDao), new(proxymocks.PaymentProxy), new(producermocks.OrderPaymentResultProducer))
+	orderDao.On("GetByID", mock.Anything, int64(5)).Return(sampleOrder(5, 42, model.OrderStatusPending), nil)
+	assetDao.On("GetByID", mock.Anything, int64(1)).Return(nil, errors.New("asset db"))
+
+	_, err := svc.GetOrderDetail(context.Background(), 42, 5)
+	require.ErrorContains(t, err, "asset db")
+}
+
 func TestListOrders_WithCursor(t *testing.T) {
 	initServiceTestEnv(t)
 	orderDao := new(daomocks.AssetOrderDao)
@@ -423,6 +435,30 @@ func TestListOrders_DAOError(t *testing.T) {
 	orderDao.On("ListByCursor", mock.Anything, mock.Anything).Return(nil, errors.New("db"))
 	_, err := svc.ListOrders(context.Background(), ListOrdersQuery{UserID: 1, Limit: 10})
 	require.Error(t, err)
+}
+
+func TestListOrders_GetByIDsError(t *testing.T) {
+	initServiceTestEnv(t)
+	orderDao := new(daomocks.AssetOrderDao)
+	assetDao := new(daomocks.AssetDao)
+	svc := newOrderServiceForTest(orderDao, assetDao, new(daomocks.UserAssetHoldingDao), new(proxymocks.PaymentProxy), new(producermocks.OrderPaymentResultProducer))
+	orderDao.On("ListByCursor", mock.Anything, mock.Anything).
+		Return([]*model.AssetOrder{sampleOrder(1, 1, model.OrderStatusPending)}, nil)
+	assetDao.On("GetByIDs", mock.Anything, []int64{1}).Return(nil, errors.New("assets db"))
+
+	_, err := svc.ListOrders(context.Background(), ListOrdersQuery{UserID: 1, Limit: 10})
+	require.ErrorContains(t, err, "assets db")
+}
+
+func TestToOrderVOWithAsset_AssetLoadErrorDegrades(t *testing.T) {
+	initServiceTestEnv(t)
+	assetDao := new(daomocks.AssetDao)
+	svc := newOrderServiceForTest(new(daomocks.AssetOrderDao), assetDao, new(daomocks.UserAssetHoldingDao), new(proxymocks.PaymentProxy), new(producermocks.OrderPaymentResultProducer))
+	assetDao.On("GetByID", mock.Anything, int64(1)).Return(nil, errors.New("asset db"))
+
+	vo := svc.toOrderVOWithAsset(context.Background(), sampleOrder(9, 1, model.OrderStatusPending))
+	require.Equal(t, "9", vo.OrderID)
+	require.Nil(t, vo.Asset)
 }
 
 func TestMapPaymentHelpers(t *testing.T) {
