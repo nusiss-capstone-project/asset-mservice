@@ -17,10 +17,12 @@ on:
           - prod
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build:
+    permissions:
+      contents: write
     runs-on: ubuntu-latest
     outputs:
       tag: ${{ steps.version.outputs.tag }}
@@ -57,7 +59,7 @@ jobs:
       - name: Login to Alibaba Cloud ACR
         uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
         with:
-          registry: ${{ secrets.ACR_REGISTRY }}
+          registry: ${{ vars.ACR_REGISTRY }}
           username: ${{ secrets.ACR_USERNAME }}
           password: ${{ secrets.ACR_PASSWORD }}
 
@@ -68,7 +70,7 @@ jobs:
           file: ./server/Dockerfile
           push: true
           tags: |
-            ${{ secrets.ACR_REGISTRY }}/${{ secrets.ACR_REPOSITORY }}:${{ steps.version.outputs.tag }}
+            ${{ vars.ACR_REGISTRY }}/${{ vars.ACR_REPOSITORY }}:${{ steps.version.outputs.tag }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -84,7 +86,7 @@ jobs:
           echo "### Build Summary" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "- **Git tag**: \`${{ steps.version.outputs.tag }}\`" >> "$GITHUB_STEP_SUMMARY"
-          echo "- **Image**: \`${{ secrets.ACR_REGISTRY }}/${{ secrets.ACR_REPOSITORY }}:${{ steps.version.outputs.tag }}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Image**: \`${{ vars.ACR_REGISTRY }}/${{ vars.ACR_REPOSITORY }}:${{ steps.version.outputs.tag }}\`" >> "$GITHUB_STEP_SUMMARY"
           echo "- **GitOps branch**: \`${{ steps.version.outputs.gitops_branch }}\`" >> "$GITHUB_STEP_SUMMARY"
           echo "- **Commit**: \`${{ github.sha }}\`" >> "$GITHUB_STEP_SUMMARY"
 
