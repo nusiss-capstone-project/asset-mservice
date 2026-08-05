@@ -538,28 +538,11 @@ const docTemplate = `{
                 }
             }
         },
-        "data.OrderAssetVO": {
-            "type": "object",
-            "properties": {
-                "asset_id": {
-                    "type": "string"
-                },
-                "icon_url": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "symbol": {
-                    "type": "string"
-                }
-            }
-        },
         "data.OrderDetailVO": {
             "type": "object",
             "properties": {
                 "asset": {
-                    "$ref": "#/definitions/data.OrderAssetVO"
+                    "$ref": "#/definitions/data.AssetVO"
                 },
                 "created_at": {
                     "type": "integer"
@@ -580,6 +563,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "quantity": {
+                    "type": "string"
+                },
+                "quote_id": {
                     "type": "string"
                 },
                 "status": {
@@ -610,8 +596,8 @@ const docTemplate = `{
         "data.OrderVO": {
             "type": "object",
             "properties": {
-                "asset_id": {
-                    "type": "string"
+                "asset": {
+                    "$ref": "#/definitions/data.AssetVO"
                 },
                 "created_at": {
                     "type": "integer"

@@ -66,9 +66,11 @@ func TestCreateOrder_ValidationErrors(t *testing.T) {
 func TestCreateOrder_IdempotentHit(t *testing.T) {
 	initServiceTestEnv(t)
 	orderDao := new(daomocks.AssetOrderDao)
-	svc := newOrderServiceForTest(orderDao, new(daomocks.AssetDao), new(daomocks.UserAssetHoldingDao), new(proxymocks.PaymentProxy), new(producermocks.OrderPaymentResultProducer))
+	assetDao := new(daomocks.AssetDao)
+	svc := newOrderServiceForTest(orderDao, assetDao, new(daomocks.UserAssetHoldingDao), new(proxymocks.PaymentProxy), new(producermocks.OrderPaymentResultProducer))
 	existing := sampleOrder(10, 42, model.OrderStatusPaySucceed)
 	orderDao.On("GetByIdempotencyKey", mock.Anything, int64(42), "idem-1").Return(existing, nil)
+	assetDao.On("GetByID", mock.Anything, int64(1)).Return(sampleAsset(1), nil)
 
 	vo, err := svc.CreateOrder(context.Background(), 42, &data.CreateOrderRequest{
 		IdempotencyKey: "idem-1", PaymentMethodID: 1, Quantity: "0.5", QuoteID: "q",
@@ -76,6 +78,8 @@ func TestCreateOrder_IdempotentHit(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "10", vo.OrderID)
 	require.Equal(t, model.OrderStatusPaySucceed, vo.Status)
+	require.NotNil(t, vo.Asset)
+	require.Equal(t, "BTC", vo.Asset.Symbol)
 }
 
 func TestCreateOrder_QuoteNotFound(t *testing.T) {
@@ -184,6 +188,9 @@ func TestCreateOrder_Success_PaySucceed(t *testing.T) {
 	require.Equal(t, "100", vo.OrderID)
 	require.Equal(t, model.OrderStatusPaySucceed, vo.Status)
 	require.Equal(t, "pay_1", vo.PaymentID)
+	require.NotNil(t, vo.Asset)
+	require.Equal(t, "1", vo.Asset.ID)
+	require.Equal(t, "BTC", vo.Asset.Symbol)
 	orderDao.AssertExpectations(t)
 	paymentProxy.AssertExpectations(t)
 	holdingDao.AssertExpectations(t)
@@ -347,7 +354,10 @@ func TestGetOrderDetail_Success(t *testing.T) {
 	vo, err := svc.GetOrderDetail(context.Background(), 42, 5)
 	require.NoError(t, err)
 	require.Equal(t, "5", vo.OrderID)
+	require.NotNil(t, vo.Asset)
+	require.Equal(t, "1", vo.Asset.ID)
 	require.Equal(t, "BTC", vo.Asset.Symbol)
+	require.Equal(t, "USD", vo.Asset.Currency)
 }
 
 func TestGetOrderDetail_NotOwned(t *testing.T) {
@@ -380,16 +390,20 @@ func TestGetOrderDetail_DAOError(t *testing.T) {
 func TestListOrders_WithCursor(t *testing.T) {
 	initServiceTestEnv(t)
 	orderDao := new(daomocks.AssetOrderDao)
-	svc := newOrderServiceForTest(orderDao, new(daomocks.AssetDao), new(daomocks.UserAssetHoldingDao), new(proxymocks.PaymentProxy), new(producermocks.OrderPaymentResultProducer))
+	assetDao := new(daomocks.AssetDao)
+	svc := newOrderServiceForTest(orderDao, assetDao, new(daomocks.UserAssetHoldingDao), new(proxymocks.PaymentProxy), new(producermocks.OrderPaymentResultProducer))
 	o1 := sampleOrder(3, 1, model.OrderStatusPending)
 	o2 := sampleOrder(2, 1, model.OrderStatusPending)
 	o3 := sampleOrder(1, 1, model.OrderStatusPending)
 	orderDao.On("ListByCursor", mock.Anything, mock.Anything).Return([]*model.AssetOrder{o1, o2, o3}, nil)
+	assetDao.On("GetByIDs", mock.Anything, []int64{1}).Return([]*model.Asset{sampleAsset(1)}, nil)
 
 	list, err := svc.ListOrders(context.Background(), ListOrdersQuery{UserID: 1, Limit: 2})
 	require.NoError(t, err)
 	require.Len(t, list.Items, 2)
 	require.Equal(t, "2", list.NextCursor)
+	require.NotNil(t, list.Items[0].Asset)
+	require.Equal(t, "BTC", list.Items[0].Asset.Symbol)
 }
 
 func TestListOrders_DefaultLimit(t *testing.T) {
@@ -460,7 +474,9 @@ func TestPublishOrderPaymentResult_NilAsset(t *testing.T) {
 }
 
 func TestToOrderVO(t *testing.T) {
-	vo := toOrderVO(sampleOrder(1, 1, model.OrderStatusPending))
+	vo := toOrderVO(sampleOrder(1, 1, model.OrderStatusPending), sampleAsset(1))
 	require.Equal(t, "0.5", vo.Quantity)
 	require.Equal(t, "1", vo.OrderID)
+	require.NotNil(t, vo.Asset)
+	require.Equal(t, "BTC", vo.Asset.Symbol)
 }

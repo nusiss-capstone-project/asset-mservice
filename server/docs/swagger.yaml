@@ -91,21 +91,10 @@ definitions:
       unit_price:
         type: string
     type: object
-  data.OrderAssetVO:
-    properties:
-      asset_id:
-        type: string
-      icon_url:
-        type: string
-      name:
-        type: string
-      symbol:
-        type: string
-    type: object
   data.OrderDetailVO:
     properties:
       asset:
-        $ref: '#/definitions/data.OrderAssetVO'
+        $ref: '#/definitions/data.AssetVO'
       created_at:
         type: integer
       order_id:
@@ -119,6 +108,8 @@ definitions:
       payment_id:
         type: string
       quantity:
+        type: string
+      quote_id:
         type: string
       status:
         type: string
@@ -138,8 +129,8 @@ definitions:
     type: object
   data.OrderVO:
     properties:
-      asset_id:
-        type: string
+      asset:
+        $ref: '#/definitions/data.AssetVO'
       created_at:
         type: integer
       order_id:
