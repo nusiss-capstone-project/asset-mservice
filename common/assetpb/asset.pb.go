@@ -2,9 +2,9 @@
 // versions:
 // 	protoc-gen-go v1.36.11
 // 	protoc        v4.25.3
-// source: proto/__PROTO_FILE__.proto
+// source: proto/asset.proto
 
-package __PROTO_PACKAGE__
+package assetpb
 
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
@@ -30,7 +30,7 @@ type HelloRequest struct {
 
 func (x *HelloRequest) Reset() {
 	*x = HelloRequest{}
-	mi := &file_proto___PROTO_FILE___proto_msgTypes[0]
+	mi := &file_proto_asset_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -42,7 +42,7 @@ func (x *HelloRequest) String() string {
 func (*HelloRequest) ProtoMessage() {}
 
 func (x *HelloRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto___PROTO_FILE___proto_msgTypes[0]
+	mi := &file_proto_asset_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -55,7 +55,7 @@ func (x *HelloRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HelloRequest.ProtoReflect.Descriptor instead.
 func (*HelloRequest) Descriptor() ([]byte, []int) {
-	return file_proto___PROTO_FILE___proto_rawDescGZIP(), []int{0}
+	return file_proto_asset_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *HelloRequest) GetName() string {
@@ -74,7 +74,7 @@ type HelloResponse struct {
 
 func (x *HelloResponse) Reset() {
 	*x = HelloResponse{}
-	mi := &file_proto___PROTO_FILE___proto_msgTypes[1]
+	mi := &file_proto_asset_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -86,7 +86,7 @@ func (x *HelloResponse) String() string {
 func (*HelloResponse) ProtoMessage() {}
 
 func (x *HelloResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto___PROTO_FILE___proto_msgTypes[1]
+	mi := &file_proto_asset_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -99,7 +99,7 @@ func (x *HelloResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HelloResponse.ProtoReflect.Descriptor instead.
 func (*HelloResponse) Descriptor() ([]byte, []int) {
-	return file_proto___PROTO_FILE___proto_rawDescGZIP(), []int{1}
+	return file_proto_asset_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *HelloResponse) GetMessage() string {
@@ -109,38 +109,38 @@ func (x *HelloResponse) GetMessage() string {
 	return ""
 }
 
-var File_proto___PROTO_FILE___proto protoreflect.FileDescriptor
+var File_proto_asset_proto protoreflect.FileDescriptor
 
-const file_proto___PROTO_FILE___proto_rawDesc = "" +
+const file_proto_asset_proto_rawDesc = "" +
 	"\n" +
-	"\x1aproto/__PROTO_FILE__.proto\x12\x11__PROTO_PACKAGE__\"\"\n" +
+	"\x11proto/asset.proto\x12\aassetpb\"\"\n" +
 	"\fHelloRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\")\n" +
 	"\rHelloResponse\x12\x18\n" +
-	"\amessage\x18\x01 \x01(\tR\amessage2a\n" +
-	"\x10__GRPC_SERVICE__\x12M\n" +
-	"\bSayHello\x12\x1f.__PROTO_PACKAGE__.HelloRequest\x1a .__PROTO_PACKAGE__.HelloResponseB&Z$/__PROTO_PACKAGE__;__PROTO_PACKAGE__b\x06proto3"
+	"\amessage\x18\x01 \x01(\tR\amessage2I\n" +
+	"\fAssetService\x129\n" +
+	"\bSayHello\x12\x15.assetpb.HelloRequest\x1a\x16.assetpb.HelloResponseB\x12Z\x10/assetpb;assetpbb\x06proto3"
 
 var (
-	file_proto___PROTO_FILE___proto_rawDescOnce sync.Once
-	file_proto___PROTO_FILE___proto_rawDescData []byte
+	file_proto_asset_proto_rawDescOnce sync.Once
+	file_proto_asset_proto_rawDescData []byte
 )
 
-func file_proto___PROTO_FILE___proto_rawDescGZIP() []byte {
-	file_proto___PROTO_FILE___proto_rawDescOnce.Do(func() {
-		file_proto___PROTO_FILE___proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_proto___PROTO_FILE___proto_rawDesc), len(file_proto___PROTO_FILE___proto_rawDesc)))
+func file_proto_asset_proto_rawDescGZIP() []byte {
+	file_proto_asset_proto_rawDescOnce.Do(func() {
+		file_proto_asset_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_proto_asset_proto_rawDesc), len(file_proto_asset_proto_rawDesc)))
 	})
-	return file_proto___PROTO_FILE___proto_rawDescData
+	return file_proto_asset_proto_rawDescData
 }
 
-var file_proto___PROTO_FILE___proto_msgTypes = make([]protoimpl.MessageInfo, 2)
-var file_proto___PROTO_FILE___proto_goTypes = []any{
-	(*HelloRequest)(nil),  // 0: __PROTO_PACKAGE__.HelloRequest
-	(*HelloResponse)(nil), // 1: __PROTO_PACKAGE__.HelloResponse
+var file_proto_asset_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_proto_asset_proto_goTypes = []any{
+	(*HelloRequest)(nil),  // 0: assetpb.HelloRequest
+	(*HelloResponse)(nil), // 1: assetpb.HelloResponse
 }
-var file_proto___PROTO_FILE___proto_depIdxs = []int32{
-	0, // 0: __PROTO_PACKAGE__.__GRPC_SERVICE__.SayHello:input_type -> __PROTO_PACKAGE__.HelloRequest
-	1, // 1: __PROTO_PACKAGE__.__GRPC_SERVICE__.SayHello:output_type -> __PROTO_PACKAGE__.HelloResponse
+var file_proto_asset_proto_depIdxs = []int32{
+	0, // 0: assetpb.AssetService.SayHello:input_type -> assetpb.HelloRequest
+	1, // 1: assetpb.AssetService.SayHello:output_type -> assetpb.HelloResponse
 	1, // [1:2] is the sub-list for method output_type
 	0, // [0:1] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name
@@ -148,26 +148,26 @@ var file_proto___PROTO_FILE___proto_depIdxs = []int32{
 	0, // [0:0] is the sub-list for field type_name
 }
 
-func init() { file_proto___PROTO_FILE___proto_init() }
-func file_proto___PROTO_FILE___proto_init() {
-	if File_proto___PROTO_FILE___proto != nil {
+func init() { file_proto_asset_proto_init() }
+func file_proto_asset_proto_init() {
+	if File_proto_asset_proto != nil {
 		return
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto___PROTO_FILE___proto_rawDesc), len(file_proto___PROTO_FILE___proto_rawDesc)),
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_asset_proto_rawDesc), len(file_proto_asset_proto_rawDesc)),
 			NumEnums:      0,
 			NumMessages:   2,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
-		GoTypes:           file_proto___PROTO_FILE___proto_goTypes,
-		DependencyIndexes: file_proto___PROTO_FILE___proto_depIdxs,
-		MessageInfos:      file_proto___PROTO_FILE___proto_msgTypes,
+		GoTypes:           file_proto_asset_proto_goTypes,
+		DependencyIndexes: file_proto_asset_proto_depIdxs,
+		MessageInfos:      file_proto_asset_proto_msgTypes,
 	}.Build()
-	File_proto___PROTO_FILE___proto = out.File
-	file_proto___PROTO_FILE___proto_goTypes = nil
-	file_proto___PROTO_FILE___proto_depIdxs = nil
+	File_proto_asset_proto = out.File
+	file_proto_asset_proto_goTypes = nil
+	file_proto_asset_proto_depIdxs = nil
 }

@@ -4,7 +4,7 @@ services:
     container_name: mysql-container
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_PASSWORD}
-      MYSQL_DATABASE: __DB_NAME__
+      MYSQL_DATABASE: asset_ms_db
     # Pure memory, disappears when CI ends
     tmpfs: /var/lib/mysql
     networks:
@@ -12,11 +12,11 @@ services:
         aliases:
           - mysql-container  
 
-  __TEMPLATE_REPO__:
+  asset-mservice:
     build:
       context: ../../server
       dockerfile: Dockerfile
-    container_name: __TEMPLATE_REPO__
+    container_name: asset-mservice
     environment:
       - MYSQL_PASSWORD=${MYSQL_PASSWORD}
     depends_on:
@@ -30,7 +30,7 @@ services:
       - ./wait-for.sh:/app/wait-for.sh   # CI 专用配置
     user: root
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/__SERVICE_SLUG__/v1/ping"]
+      test: ["CMD", "curl", "-f", "http://localhost:8080/asset-ms/v1/ping"]
       interval: 10s
       timeout: 5s
       retries: 3

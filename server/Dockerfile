@@ -1,5 +1,5 @@
-# Use the official Go image with version __GO_VERSION__
-FROM golang:__GO_VERSION__-alpine AS builder 
+# Use the official Go image with version 1.25.10
+FROM golang:1.25.10-alpine AS builder 
 
 RUN apk update && \
     apk add --no-cache \

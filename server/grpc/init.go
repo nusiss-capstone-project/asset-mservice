@@ -6,9 +6,9 @@ import (
 	"os"
 	"time"
 
-	"github.com/__TEMPLATE_ORG__/__TEMPLATE_REPO__/common/__PROTO_PACKAGE__"
-	"github.com/__TEMPLATE_ORG__/__TEMPLATE_REPO__/server/config"
-	"github.com/__TEMPLATE_ORG__/__TEMPLATE_REPO__/server/log"
+	"github.com/nusiss-capstone-project/asset-mservice/common/assetpb"
+	"github.com/nusiss-capstone-project/asset-mservice/server/config"
+	"github.com/nusiss-capstone-project/asset-mservice/server/log"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	grpcpkg "google.golang.org/grpc"
 )
@@ -30,7 +30,7 @@ func Init(exitSig chan os.Signal) {
 		grpcpkg.StatsHandler(otelgrpc.NewServerHandler()),
 	}
 	grpcServer := grpcpkg.NewServer(opts...)
-	__PROTO_PACKAGE__.RegisterX_GRPC_SERVICE__Server(grpcServer, &X_GRPC_SERVICE__{})
+	assetpb.RegisterAssetServiceServer(grpcServer, &AssetService{})
 
 	log.Logger.Infof("Server is running on %s", ipPort)
 	if err := grpcServer.Serve(listener); err != nil {

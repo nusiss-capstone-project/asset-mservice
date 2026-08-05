@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"os"
 
-	"github.com/__TEMPLATE_ORG__/__TEMPLATE_REPO__/server/repository/model"
+	"github.com/nusiss-capstone-project/asset-mservice/server/repository/model"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )

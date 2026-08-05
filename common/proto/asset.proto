@@ -1,10 +1,10 @@
 syntax = "proto3";
 
-package __PROTO_PACKAGE__;
+package assetpb;
 
-option go_package = "/__PROTO_PACKAGE__;__PROTO_PACKAGE__";
+option go_package = "/assetpb;assetpb";
 
-service __GRPC_SERVICE__ {
+service AssetService {
   rpc SayHello (HelloRequest) returns (HelloResponse);
 }
 

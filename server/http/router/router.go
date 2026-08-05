@@ -3,17 +3,17 @@ package router
 import (
 	"github.com/gin-gonic/gin"
 
-	_ "github.com/__TEMPLATE_ORG__/__TEMPLATE_REPO__/server/docs"
-	"github.com/__TEMPLATE_ORG__/__TEMPLATE_REPO__/server/http/api"
-	"github.com/__TEMPLATE_ORG__/__TEMPLATE_REPO__/server/http/data"
-	"github.com/__TEMPLATE_ORG__/__TEMPLATE_REPO__/server/log"
+	_ "github.com/nusiss-capstone-project/asset-mservice/server/docs"
+	"github.com/nusiss-capstone-project/asset-mservice/server/http/api"
+	"github.com/nusiss-capstone-project/asset-mservice/server/http/data"
+	"github.com/nusiss-capstone-project/asset-mservice/server/log"
 	swaggerFiles "github.com/swaggo/files"
 	gs "github.com/swaggo/gin-swagger"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 )
 
 const (
-	serviceURIPrefix = "/__SERVICE_SLUG__/v1"
+	serviceURIPrefix = "/asset-ms/v1"
 )
 
 func NewRouter() *gin.Engine {
@@ -27,7 +27,7 @@ func NewRouter() *gin.Engine {
 	{
 		basicGroup.GET("/swagger/*any", gs.WrapHandler(
 			swaggerFiles.Handler,
-			gs.URL("/__SERVICE_SLUG__/v1/swagger/doc.json"),
+			gs.URL("/asset-ms/v1/swagger/doc.json"),
 		))
 		basicGroup.GET("/ping", func(c *gin.Context) {
 			c.JSON(200, gin.H{

@@ -5,11 +5,11 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/__TEMPLATE_ORG__/__TEMPLATE_REPO__/server/log"
-	"github.com/__TEMPLATE_ORG__/__TEMPLATE_REPO__/server/repository"
+	"github.com/nusiss-capstone-project/asset-mservice/server/log"
+	"github.com/nusiss-capstone-project/asset-mservice/server/repository"
 	"gorm.io/gorm"
 
-	"github.com/__TEMPLATE_ORG__/__TEMPLATE_REPO__/server/repository/model"
+	"github.com/nusiss-capstone-project/asset-mservice/server/repository/model"
 )
 
 type ItemDao interface {

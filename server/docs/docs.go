@@ -15,7 +15,7 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/__SERVICE_SLUG__/v1/{client}/items": {
+        "/asset-ms/v1/items": {
             "post": {
                 "description": "Create an item record.",
                 "consumes": [
@@ -37,17 +37,6 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/data.ItemVO"
                         }
-                    },
-                    {
-                        "enum": [
-                            "customer",
-                            "merchant"
-                        ],
-                        "type": "string",
-                        "description": "Client identifier",
-                        "name": "client",
-                        "in": "path",
-                        "required": true
                     }
                 ],
                 "responses": {
@@ -108,7 +97,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/__SERVICE_SLUG__/v1/{client}/items/{item_id}": {
+        "/asset-ms/v1/items/{item_id}": {
             "get": {
                 "description": "Get item information by item ID.",
                 "tags": [
@@ -116,17 +105,6 @@ const docTemplate = `{
                 ],
                 "summary": "Item Query with ID",
                 "parameters": [
-                    {
-                        "enum": [
-                            "customer",
-                            "merchant"
-                        ],
-                        "type": "string",
-                        "description": "Client identifier",
-                        "name": "client",
-                        "in": "path",
-                        "required": true
-                    },
                     {
                         "type": "integer",
                         "description": "Item.ID",

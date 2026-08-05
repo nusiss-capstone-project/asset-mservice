@@ -13,8 +13,8 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/__TEMPLATE_ORG__/__TEMPLATE_REPO__/server/config"
-	"github.com/__TEMPLATE_ORG__/__TEMPLATE_REPO__/server/http/data"
+	"github.com/nusiss-capstone-project/asset-mservice/server/config"
+	"github.com/nusiss-capstone-project/asset-mservice/server/http/data"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"

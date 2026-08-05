@@ -4,7 +4,7 @@
         "contact": {}
     },
     "paths": {
-        "/__SERVICE_SLUG__/v1/{client}/items": {
+        "/asset-ms/v1/items": {
             "post": {
                 "description": "Create an item record.",
                 "consumes": [
@@ -26,17 +26,6 @@
                         "schema": {
                             "$ref": "#/definitions/data.ItemVO"
                         }
-                    },
-                    {
-                        "enum": [
-                            "customer",
-                            "merchant"
-                        ],
-                        "type": "string",
-                        "description": "Client identifier",
-                        "name": "client",
-                        "in": "path",
-                        "required": true
                     }
                 ],
                 "responses": {
@@ -97,7 +86,7 @@
                 }
             }
         },
-        "/__SERVICE_SLUG__/v1/{client}/items/{item_id}": {
+        "/asset-ms/v1/items/{item_id}": {
             "get": {
                 "description": "Get item information by item ID.",
                 "tags": [
@@ -105,17 +94,6 @@
                 ],
                 "summary": "Item Query with ID",
                 "parameters": [
-                    {
-                        "enum": [
-                            "customer",
-                            "merchant"
-                        ],
-                        "type": "string",
-                        "description": "Client identifier",
-                        "name": "client",
-                        "in": "path",
-                        "required": true
-                    },
                     {
                         "type": "integer",
                         "description": "Item.ID",

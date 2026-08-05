@@ -1,3 +1,3 @@
 package data
 
-const ServiceName = "__TEMPLATE_REPO__"
+const ServiceName = "asset-mservice"

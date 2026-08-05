@@ -1,9 +1,9 @@
-module github.com/__TEMPLATE_ORG__/__TEMPLATE_REPO__/server
+module github.com/nusiss-capstone-project/asset-mservice/server
 
-go __GO_VERSION__
+go 1.25.10
 
 require (
-	github.com/__TEMPLATE_ORG__/__TEMPLATE_REPO__/common v0.0.1
+	github.com/nusiss-capstone-project/asset-mservice/common v0.0.1
 	github.com/gin-gonic/gin v1.12.0
 	github.com/spf13/viper v1.21.0
 	github.com/stretchr/testify v1.11.1

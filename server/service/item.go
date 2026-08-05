@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/__TEMPLATE_ORG__/__TEMPLATE_REPO__/server/http/data"
-	"github.com/__TEMPLATE_ORG__/__TEMPLATE_REPO__/server/log"
-	"github.com/__TEMPLATE_ORG__/__TEMPLATE_REPO__/server/repository/dao"
-	"github.com/__TEMPLATE_ORG__/__TEMPLATE_REPO__/server/repository/model"
+	"github.com/nusiss-capstone-project/asset-mservice/server/http/data"
+	"github.com/nusiss-capstone-project/asset-mservice/server/log"
+	"github.com/nusiss-capstone-project/asset-mservice/server/repository/dao"
+	"github.com/nusiss-capstone-project/asset-mservice/server/repository/model"
 )
 
 type ItemService interface {

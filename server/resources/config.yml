@@ -10,7 +10,7 @@ http:
 
 log:
   level: debug
-  file_path: ./logs/__TEMPLATE_REPO__.log
+  file_path: ./logs/asset-mservice.log
 
 system:
   allowed_origins: 

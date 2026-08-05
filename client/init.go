@@ -4,18 +4,18 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/__TEMPLATE_ORG__/__TEMPLATE_REPO__/common/__PROTO_PACKAGE__"
+	"github.com/nusiss-capstone-project/asset-mservice/common/assetpb"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
 
 var (
 	conn           *grpc.ClientConn
-	client         __PROTO_PACKAGE__.X_GRPC_SERVICE__Client
+	client         assetpb.AssetServiceClient
 	clientSyncOnce sync.Once
 )
 
-func GetX_GRPC_SERVICE__Client(config *GRpcClientConfig) (__PROTO_PACKAGE__.X_GRPC_SERVICE__Client, error) {
+func GetAssetServiceClient(config *GRpcClientConfig) (assetpb.AssetServiceClient, error) {
 	clientSyncOnce.Do(func() {
 		opts := []grpc.DialOption{
 			grpc.WithTransportCredentials(insecure.NewCredentials()),
@@ -26,7 +26,7 @@ func GetX_GRPC_SERVICE__Client(config *GRpcClientConfig) (__PROTO_PACKAGE__.X_GR
 		if err != nil {
 			panic(err)
 		}
-		client = __PROTO_PACKAGE__.NewX_GRPC_SERVICE__Client(conn)
+		client = assetpb.NewAssetServiceClient(conn)
 	})
 	return client, nil
 }

@@ -3,15 +3,15 @@ package grpc
 import (
 	"context"
 
-	"github.com/__TEMPLATE_ORG__/__TEMPLATE_REPO__/common/__PROTO_PACKAGE__"
-	"github.com/__TEMPLATE_ORG__/__TEMPLATE_REPO__/server/log"
+	"github.com/nusiss-capstone-project/asset-mservice/common/assetpb"
+	"github.com/nusiss-capstone-project/asset-mservice/server/log"
 )
 
-type X_GRPC_SERVICE__ struct {
-	__PROTO_PACKAGE__.UnimplementedX_GRPC_SERVICE__Server
+type AssetService struct {
+	assetpb.UnimplementedAssetServiceServer
 }
 
-func (s *X_GRPC_SERVICE__) SayHello(ctx context.Context, in *__PROTO_PACKAGE__.HelloRequest) (*__PROTO_PACKAGE__.HelloResponse, error) {
+func (s *AssetService) SayHello(ctx context.Context, in *assetpb.HelloRequest) (*assetpb.HelloResponse, error) {
 	log.Logger.Infof("Received: %v", in.GetName())
-	return &__PROTO_PACKAGE__.HelloResponse{Message: "Hello " + in.GetName()}, nil
+	return &assetpb.HelloResponse{Message: "Hello " + in.GetName()}, nil
 }

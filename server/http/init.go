@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/__TEMPLATE_ORG__/__TEMPLATE_REPO__/server/config"
-	"github.com/__TEMPLATE_ORG__/__TEMPLATE_REPO__/server/http/router"
-	"github.com/__TEMPLATE_ORG__/__TEMPLATE_REPO__/server/log"
+	"github.com/nusiss-capstone-project/asset-mservice/server/config"
+	"github.com/nusiss-capstone-project/asset-mservice/server/http/router"
+	"github.com/nusiss-capstone-project/asset-mservice/server/log"
 )
 
 func Init(exitSig chan os.Signal) {

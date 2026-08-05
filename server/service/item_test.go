@@ -6,11 +6,11 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/__TEMPLATE_ORG__/__TEMPLATE_REPO__/server/config"
-	"github.com/__TEMPLATE_ORG__/__TEMPLATE_REPO__/server/http/data"
-	"github.com/__TEMPLATE_ORG__/__TEMPLATE_REPO__/server/log"
-	"github.com/__TEMPLATE_ORG__/__TEMPLATE_REPO__/server/repository/dao/mocks"
-	"github.com/__TEMPLATE_ORG__/__TEMPLATE_REPO__/server/repository/model"
+	"github.com/nusiss-capstone-project/asset-mservice/server/config"
+	"github.com/nusiss-capstone-project/asset-mservice/server/http/data"
+	"github.com/nusiss-capstone-project/asset-mservice/server/log"
+	"github.com/nusiss-capstone-project/asset-mservice/server/repository/dao/mocks"
+	"github.com/nusiss-capstone-project/asset-mservice/server/repository/model"
 	"github.com/stretchr/testify/mock"
 )
 

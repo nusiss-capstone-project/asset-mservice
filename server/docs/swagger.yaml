@@ -19,7 +19,7 @@ definitions:
 info:
   contact: {}
 paths:
-  /__SERVICE_SLUG__/v1/{client}/items:
+  /asset-ms/v1/items:
     post:
       consumes:
       - application/json
@@ -31,14 +31,6 @@ paths:
         required: true
         schema:
           $ref: '#/definitions/data.ItemVO'
-      - description: Client identifier
-        enum:
-        - customer
-        - merchant
-        in: path
-        name: client
-        required: true
-        type: string
       produces:
       - application/json
       responses:
@@ -72,18 +64,10 @@ paths:
       summary: Item Create
       tags:
       - Item
-  /__SERVICE_SLUG__/v1/{client}/items/{item_id}:
+  /asset-ms/v1/items/{item_id}:
     get:
       description: Get item information by item ID.
       parameters:
-      - description: Client identifier
-        enum:
-        - customer
-        - merchant
-        in: path
-        name: client
-        required: true
-        type: string
       - description: Item.ID
         in: path
         name: item_id

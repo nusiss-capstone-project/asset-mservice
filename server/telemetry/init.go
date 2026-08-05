@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/__TEMPLATE_ORG__/__TEMPLATE_REPO__/server/http/data"
-	appLog "github.com/__TEMPLATE_ORG__/__TEMPLATE_REPO__/server/log"
+	"github.com/nusiss-capstone-project/asset-mservice/server/http/data"
+	appLog "github.com/nusiss-capstone-project/asset-mservice/server/log"
 	otelruntime "go.opentelemetry.io/contrib/instrumentation/runtime"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
