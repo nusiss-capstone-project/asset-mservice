@@ -14,6 +14,7 @@ import (
 	daomocks "github.com/nusiss-capstone-project/asset-mservice/server/repository/dao/mocks"
 	"github.com/nusiss-capstone-project/asset-mservice/server/repository/model"
 	cacheredis "github.com/nusiss-capstone-project/asset-mservice/server/repository/redis"
+	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
@@ -23,6 +24,7 @@ func newOrderServiceForTest(
 	orderDao *daomocks.AssetOrderDao,
 	assetDao *daomocks.AssetDao,
 	holdingDao *daomocks.UserAssetHoldingDao,
+	ledgerDao *daomocks.AccountLedgerDao,
 	paymentProxy *proxymocks.PaymentProxy,
 	resultProducer *producermocks.OrderPaymentResultProducer,
 ) *OrderServiceImpl {
@@ -30,6 +32,7 @@ func newOrderServiceForTest(
 		orderDao:                   orderDao,
 		assetDao:                   assetDao,
 		holdingDao:                 holdingDao,
+		ledgerDao:                  ledgerDao,
 		paymentProxy:               paymentProxy,
 		orderPaymentResultProducer: resultProducer,
 	}
@@ -49,7 +52,7 @@ func saveTestQuote(t *testing.T, quoteID string, userID, assetID int64) {
 
 func TestCreateOrder_ValidationErrors(t *testing.T) {
 	initServiceTestEnv(t)
-	svc := newOrderServiceForTest(new(daomocks.AssetOrderDao), new(daomocks.AssetDao), new(daomocks.UserAssetHoldingDao), new(proxymocks.PaymentProxy), new(producermocks.OrderPaymentResultProducer))
+	svc := newOrderServiceForTest(new(daomocks.AssetOrderDao), new(daomocks.AssetDao), new(daomocks.UserAssetHoldingDao), new(daomocks.AccountLedgerDao), new(proxymocks.PaymentProxy), new(producermocks.OrderPaymentResultProducer))
 
 	_, err := svc.CreateOrder(context.Background(), 1, &data.CreateOrderRequest{})
 	require.ErrorContains(t, err, "idempotency_key")
@@ -67,7 +70,7 @@ func TestCreateOrder_IdempotentHit(t *testing.T) {
 	initServiceTestEnv(t)
 	orderDao := new(daomocks.AssetOrderDao)
 	assetDao := new(daomocks.AssetDao)
-	svc := newOrderServiceForTest(orderDao, assetDao, new(daomocks.UserAssetHoldingDao), new(proxymocks.PaymentProxy), new(producermocks.OrderPaymentResultProducer))
+	svc := newOrderServiceForTest(orderDao, assetDao, new(daomocks.UserAssetHoldingDao), new(daomocks.AccountLedgerDao), new(proxymocks.PaymentProxy), new(producermocks.OrderPaymentResultProducer))
 	existing := sampleOrder(10, 42, model.OrderStatusPaySucceed)
 	orderDao.On("GetByIdempotencyKey", mock.Anything, int64(42), "idem-1").Return(existing, nil)
 	assetDao.On("GetByID", mock.Anything, int64(1)).Return(sampleAsset(1), nil)
@@ -86,7 +89,7 @@ func TestCreateOrder_QuoteNotFound(t *testing.T) {
 	initServiceTestEnv(t)
 	startTestRedis(t)
 	orderDao := new(daomocks.AssetOrderDao)
-	svc := newOrderServiceForTest(orderDao, new(daomocks.AssetDao), new(daomocks.UserAssetHoldingDao), new(proxymocks.PaymentProxy), new(producermocks.OrderPaymentResultProducer))
+	svc := newOrderServiceForTest(orderDao, new(daomocks.AssetDao), new(daomocks.UserAssetHoldingDao), new(daomocks.AccountLedgerDao), new(proxymocks.PaymentProxy), new(producermocks.OrderPaymentResultProducer))
 	orderDao.On("GetByIdempotencyKey", mock.Anything, int64(1), "k").Return(nil, nil)
 
 	_, err := svc.CreateOrder(context.Background(), 1, &data.CreateOrderRequest{
@@ -100,7 +103,7 @@ func TestCreateOrder_QuoteWrongUser(t *testing.T) {
 	startTestRedis(t)
 	saveTestQuote(t, "q1", 99, 1)
 	orderDao := new(daomocks.AssetOrderDao)
-	svc := newOrderServiceForTest(orderDao, new(daomocks.AssetDao), new(daomocks.UserAssetHoldingDao), new(proxymocks.PaymentProxy), new(producermocks.OrderPaymentResultProducer))
+	svc := newOrderServiceForTest(orderDao, new(daomocks.AssetDao), new(daomocks.UserAssetHoldingDao), new(daomocks.AccountLedgerDao), new(proxymocks.PaymentProxy), new(producermocks.OrderPaymentResultProducer))
 	orderDao.On("GetByIdempotencyKey", mock.Anything, int64(1), "k").Return(nil, nil)
 
 	_, err := svc.CreateOrder(context.Background(), 1, &data.CreateOrderRequest{
@@ -116,7 +119,7 @@ func TestCreateOrder_QuoteExpired(t *testing.T) {
 		QuoteID: "qexp", AssetID: 1, Currency: "USD", UnitPrice: "100.00", UserID: 1, ExpiresAt: time.Now().Add(-time.Minute).Unix(),
 	}))
 	orderDao := new(daomocks.AssetOrderDao)
-	svc := newOrderServiceForTest(orderDao, new(daomocks.AssetDao), new(daomocks.UserAssetHoldingDao), new(proxymocks.PaymentProxy), new(producermocks.OrderPaymentResultProducer))
+	svc := newOrderServiceForTest(orderDao, new(daomocks.AssetDao), new(daomocks.UserAssetHoldingDao), new(daomocks.AccountLedgerDao), new(proxymocks.PaymentProxy), new(producermocks.OrderPaymentResultProducer))
 	orderDao.On("GetByIdempotencyKey", mock.Anything, int64(1), "k").Return(nil, nil)
 
 	_, err := svc.CreateOrder(context.Background(), 1, &data.CreateOrderRequest{
@@ -133,7 +136,7 @@ func TestCreateOrder_InvalidUnitPrice(t *testing.T) {
 		ExpiresAt: time.Now().Add(time.Minute).Unix(),
 	}))
 	orderDao := new(daomocks.AssetOrderDao)
-	svc := newOrderServiceForTest(orderDao, new(daomocks.AssetDao), new(daomocks.UserAssetHoldingDao), new(proxymocks.PaymentProxy), new(producermocks.OrderPaymentResultProducer))
+	svc := newOrderServiceForTest(orderDao, new(daomocks.AssetDao), new(daomocks.UserAssetHoldingDao), new(daomocks.AccountLedgerDao), new(proxymocks.PaymentProxy), new(producermocks.OrderPaymentResultProducer))
 	orderDao.On("GetByIdempotencyKey", mock.Anything, int64(1), "k").Return(nil, nil)
 	_, err := svc.CreateOrder(context.Background(), 1, &data.CreateOrderRequest{
 		IdempotencyKey: "k", PaymentMethodID: 1, Quantity: "1", QuoteID: "qbad",
@@ -149,9 +152,10 @@ func TestCreateOrder_Success_PaySucceed(t *testing.T) {
 	orderDao := new(daomocks.AssetOrderDao)
 	assetDao := new(daomocks.AssetDao)
 	holdingDao := new(daomocks.UserAssetHoldingDao)
+	ledgerDao := new(daomocks.AccountLedgerDao)
 	paymentProxy := new(proxymocks.PaymentProxy)
 	resultProducer := new(producermocks.OrderPaymentResultProducer)
-	svc := newOrderServiceForTest(orderDao, assetDao, holdingDao, paymentProxy, resultProducer)
+	svc := newOrderServiceForTest(orderDao, assetDao, holdingDao, ledgerDao, paymentProxy, resultProducer)
 
 	pendingOrder := sampleOrder(100, 42, model.OrderStatusPending)
 	pendingOrder.QuoteID = "qok"
@@ -171,7 +175,16 @@ func TestCreateOrder_Success_PaySucceed(t *testing.T) {
 	orderDao.On("GetByOrderNo", mock.Anything, mock.AnythingOfType("string")).Return(pendingOrder, nil)
 	orderDao.On("UpdatePaymentResult", mock.Anything, mock.AnythingOfType("*gorm.DB"), int64(100), "pay_1", model.OrderStatusPending, model.OrderStatusPaySucceed).
 		Return(int64(1), nil)
-	holdingDao.On("UpsertAddQuantity", mock.Anything, mock.AnythingOfType("*gorm.DB"), int64(42), int64(1), mock.Anything).Return(nil)
+	holdingDao.On("UpsertAddQuantity", mock.Anything, mock.AnythingOfType("*gorm.DB"), int64(42), int64(1), mock.Anything).Return(decimal.RequireFromString("0.5"), nil)
+	ledgerDao.On("Create", mock.Anything, mock.AnythingOfType("*gorm.DB"), mock.MatchedBy(func(l *model.AccountLedger) bool {
+		return l.UserID == 42 &&
+			l.AssetCode == "BTC" &&
+			l.BusinessType == model.LedgerBusinessTypePurchase &&
+			l.BusinessID == pendingOrder.OrderNo &&
+			l.ChangeAmount.Equal(decimal.RequireFromString("0.5")) &&
+			l.BalanceAfter.Equal(decimal.RequireFromString("0.5")) &&
+			l.LedgerNo != ""
+	})).Return(nil)
 	assetDao.On("GetByID", mock.Anything, int64(1)).Return(sampleAsset(1), nil)
 	resultProducer.On("PublishOrderPaymentResult", mock.Anything, mock.MatchedBy(func(e kproducer.OrderPaymentResultEvent) bool {
 		return e.UserID == 42 && e.PaymentID == "pay_1" && e.AssetSymbol == "BTC" && e.Status == model.OrderStatusPaySucceed
@@ -194,6 +207,7 @@ func TestCreateOrder_Success_PaySucceed(t *testing.T) {
 	orderDao.AssertExpectations(t)
 	paymentProxy.AssertExpectations(t)
 	holdingDao.AssertExpectations(t)
+	ledgerDao.AssertExpectations(t)
 	resultProducer.AssertExpectations(t)
 }
 
@@ -207,7 +221,7 @@ func TestCreateOrder_PaymentRPCFailedMarksPayFail(t *testing.T) {
 	holdingDao := new(daomocks.UserAssetHoldingDao)
 	paymentProxy := new(proxymocks.PaymentProxy)
 	resultProducer := new(producermocks.OrderPaymentResultProducer)
-	svc := newOrderServiceForTest(orderDao, assetDao, holdingDao, paymentProxy, resultProducer)
+	svc := newOrderServiceForTest(orderDao, assetDao, holdingDao, new(daomocks.AccountLedgerDao), paymentProxy, resultProducer)
 
 	pendingOrder := sampleOrder(11, 1, model.OrderStatusPending)
 	orderDao.On("GetByIdempotencyKey", mock.Anything, int64(1), "idem-fail").Return(nil, nil)
@@ -234,14 +248,14 @@ func TestCreateOrder_PaymentRPCFailedMarksPayFail(t *testing.T) {
 
 func TestHandlePaymentResult_BizIDRequired(t *testing.T) {
 	initServiceTestEnv(t)
-	svc := newOrderServiceForTest(new(daomocks.AssetOrderDao), new(daomocks.AssetDao), new(daomocks.UserAssetHoldingDao), new(proxymocks.PaymentProxy), new(producermocks.OrderPaymentResultProducer))
+	svc := newOrderServiceForTest(new(daomocks.AssetOrderDao), new(daomocks.AssetDao), new(daomocks.UserAssetHoldingDao), new(daomocks.AccountLedgerDao), new(proxymocks.PaymentProxy), new(producermocks.OrderPaymentResultProducer))
 	require.ErrorContains(t, svc.HandlePaymentResult(context.Background(), PaymentResultInput{}), "biz_id")
 }
 
 func TestHandlePaymentResult_OrderNotFound(t *testing.T) {
 	initServiceTestEnv(t)
 	orderDao := new(daomocks.AssetOrderDao)
-	svc := newOrderServiceForTest(orderDao, new(daomocks.AssetDao), new(daomocks.UserAssetHoldingDao), new(proxymocks.PaymentProxy), new(producermocks.OrderPaymentResultProducer))
+	svc := newOrderServiceForTest(orderDao, new(daomocks.AssetDao), new(daomocks.UserAssetHoldingDao), new(daomocks.AccountLedgerDao), new(proxymocks.PaymentProxy), new(producermocks.OrderPaymentResultProducer))
 	orderDao.On("GetByOrderNo", mock.Anything, "AOX").Return(nil, nil)
 	require.NoError(t, svc.HandlePaymentResult(context.Background(), PaymentResultInput{BizID: "AOX"}))
 }
@@ -249,7 +263,7 @@ func TestHandlePaymentResult_OrderNotFound(t *testing.T) {
 func TestHandlePaymentResult_OrderLookupError(t *testing.T) {
 	initServiceTestEnv(t)
 	orderDao := new(daomocks.AssetOrderDao)
-	svc := newOrderServiceForTest(orderDao, new(daomocks.AssetDao), new(daomocks.UserAssetHoldingDao), new(proxymocks.PaymentProxy), new(producermocks.OrderPaymentResultProducer))
+	svc := newOrderServiceForTest(orderDao, new(daomocks.AssetDao), new(daomocks.UserAssetHoldingDao), new(daomocks.AccountLedgerDao), new(proxymocks.PaymentProxy), new(producermocks.OrderPaymentResultProducer))
 	orderDao.On("GetByOrderNo", mock.Anything, "AOX").Return(nil, errors.New("db"))
 	require.Error(t, svc.HandlePaymentResult(context.Background(), PaymentResultInput{BizID: "AOX"}))
 }
@@ -257,7 +271,7 @@ func TestHandlePaymentResult_OrderLookupError(t *testing.T) {
 func TestHandlePaymentResult_AlreadyApplied(t *testing.T) {
 	initServiceTestEnv(t)
 	orderDao := new(daomocks.AssetOrderDao)
-	svc := newOrderServiceForTest(orderDao, new(daomocks.AssetDao), new(daomocks.UserAssetHoldingDao), new(proxymocks.PaymentProxy), new(producermocks.OrderPaymentResultProducer))
+	svc := newOrderServiceForTest(orderDao, new(daomocks.AssetDao), new(daomocks.UserAssetHoldingDao), new(daomocks.AccountLedgerDao), new(proxymocks.PaymentProxy), new(producermocks.OrderPaymentResultProducer))
 	orderDao.On("GetByOrderNo", mock.Anything, "AO1").Return(sampleOrder(1, 1, model.OrderStatusPaySucceed), nil)
 	require.NoError(t, svc.HandlePaymentResult(context.Background(), PaymentResultInput{
 		BizID: "AO1", EventType: paymentEventSucceeded, Status: "SUCCEEDED",
@@ -267,7 +281,7 @@ func TestHandlePaymentResult_AlreadyApplied(t *testing.T) {
 func TestHandlePaymentResult_SkipNonPending(t *testing.T) {
 	initServiceTestEnv(t)
 	orderDao := new(daomocks.AssetOrderDao)
-	svc := newOrderServiceForTest(orderDao, new(daomocks.AssetDao), new(daomocks.UserAssetHoldingDao), new(proxymocks.PaymentProxy), new(producermocks.OrderPaymentResultProducer))
+	svc := newOrderServiceForTest(orderDao, new(daomocks.AssetDao), new(daomocks.UserAssetHoldingDao), new(daomocks.AccountLedgerDao), new(proxymocks.PaymentProxy), new(producermocks.OrderPaymentResultProducer))
 	orderDao.On("GetByOrderNo", mock.Anything, "AO1").Return(sampleOrder(1, 1, model.OrderStatusPayFail), nil)
 	require.NoError(t, svc.HandlePaymentResult(context.Background(), PaymentResultInput{
 		BizID: "AO1", EventType: paymentEventSucceeded,
@@ -277,7 +291,7 @@ func TestHandlePaymentResult_SkipNonPending(t *testing.T) {
 func TestHandlePaymentResult_FailPath_RowsZero(t *testing.T) {
 	initServiceTestEnv(t)
 	orderDao := new(daomocks.AssetOrderDao)
-	svc := newOrderServiceForTest(orderDao, new(daomocks.AssetDao), new(daomocks.UserAssetHoldingDao), new(proxymocks.PaymentProxy), new(producermocks.OrderPaymentResultProducer))
+	svc := newOrderServiceForTest(orderDao, new(daomocks.AssetDao), new(daomocks.UserAssetHoldingDao), new(daomocks.AccountLedgerDao), new(proxymocks.PaymentProxy), new(producermocks.OrderPaymentResultProducer))
 	orderDao.On("GetByOrderNo", mock.Anything, "AO1").Return(sampleOrder(1, 1, model.OrderStatusPending), nil)
 	orderDao.On("UpdatePaymentResult", mock.Anything, (*gorm.DB)(nil), int64(1), "pay", model.OrderStatusPending, model.OrderStatusPayFail).
 		Return(int64(0), nil)
@@ -289,7 +303,7 @@ func TestHandlePaymentResult_FailPath_RowsZero(t *testing.T) {
 func TestHandlePaymentResult_FailUpdateError(t *testing.T) {
 	initServiceTestEnv(t)
 	orderDao := new(daomocks.AssetOrderDao)
-	svc := newOrderServiceForTest(orderDao, new(daomocks.AssetDao), new(daomocks.UserAssetHoldingDao), new(proxymocks.PaymentProxy), new(producermocks.OrderPaymentResultProducer))
+	svc := newOrderServiceForTest(orderDao, new(daomocks.AssetDao), new(daomocks.UserAssetHoldingDao), new(daomocks.AccountLedgerDao), new(proxymocks.PaymentProxy), new(producermocks.OrderPaymentResultProducer))
 	orderDao.On("GetByOrderNo", mock.Anything, "AO1").Return(sampleOrder(1, 1, model.OrderStatusPending), nil)
 	orderDao.On("UpdatePaymentResult", mock.Anything, (*gorm.DB)(nil), int64(1), "pay", model.OrderStatusPending, model.OrderStatusPayFail).
 		Return(int64(0), errors.New("update failed"))
@@ -301,7 +315,7 @@ func TestHandlePaymentResult_FailUpdateError(t *testing.T) {
 func TestHandlePaymentResult_SucceedAlreadySettledInTx(t *testing.T) {
 	initServiceTestEnv(t)
 	orderDao := new(daomocks.AssetOrderDao)
-	svc := newOrderServiceForTest(orderDao, new(daomocks.AssetDao), new(daomocks.UserAssetHoldingDao), new(proxymocks.PaymentProxy), new(producermocks.OrderPaymentResultProducer))
+	svc := newOrderServiceForTest(orderDao, new(daomocks.AssetDao), new(daomocks.UserAssetHoldingDao), new(daomocks.AccountLedgerDao), new(proxymocks.PaymentProxy), new(producermocks.OrderPaymentResultProducer))
 	orderDao.On("GetByOrderNo", mock.Anything, "AO1").Return(sampleOrder(1, 1, model.OrderStatusPending), nil)
 	orderDao.On("UpdatePaymentResult", mock.Anything, mock.AnythingOfType("*gorm.DB"), int64(1), "pay", model.OrderStatusPending, model.OrderStatusPaySucceed).
 		Return(int64(0), nil)
@@ -314,15 +328,17 @@ func TestHandlePaymentResult_SucceedHoldingError(t *testing.T) {
 	initServiceTestEnv(t)
 	orderDao := new(daomocks.AssetOrderDao)
 	holdingDao := new(daomocks.UserAssetHoldingDao)
-	svc := newOrderServiceForTest(orderDao, new(daomocks.AssetDao), holdingDao, new(proxymocks.PaymentProxy), new(producermocks.OrderPaymentResultProducer))
+	ledgerDao := new(daomocks.AccountLedgerDao)
+	svc := newOrderServiceForTest(orderDao, new(daomocks.AssetDao), holdingDao, ledgerDao, new(proxymocks.PaymentProxy), new(producermocks.OrderPaymentResultProducer))
 	orderDao.On("GetByOrderNo", mock.Anything, "AO1").Return(sampleOrder(1, 1, model.OrderStatusPending), nil)
 	orderDao.On("UpdatePaymentResult", mock.Anything, mock.AnythingOfType("*gorm.DB"), int64(1), "pay", model.OrderStatusPending, model.OrderStatusPaySucceed).
 		Return(int64(1), nil)
 	holdingDao.On("UpsertAddQuantity", mock.Anything, mock.AnythingOfType("*gorm.DB"), int64(1), int64(1), mock.Anything).
-		Return(errors.New("holding failed"))
+		Return(decimal.Zero, errors.New("holding failed"))
 	require.ErrorContains(t, svc.HandlePaymentResult(context.Background(), PaymentResultInput{
 		BizID: "AO1", PaymentID: "pay", EventType: paymentEventSucceeded,
 	}), "holding failed")
+	ledgerDao.AssertNotCalled(t, "Create", mock.Anything, mock.Anything, mock.Anything)
 }
 
 func TestHandlePaymentResult_SucceedPublish(t *testing.T) {
@@ -330,24 +346,71 @@ func TestHandlePaymentResult_SucceedPublish(t *testing.T) {
 	orderDao := new(daomocks.AssetOrderDao)
 	assetDao := new(daomocks.AssetDao)
 	holdingDao := new(daomocks.UserAssetHoldingDao)
+	ledgerDao := new(daomocks.AccountLedgerDao)
 	resultProducer := new(producermocks.OrderPaymentResultProducer)
-	svc := newOrderServiceForTest(orderDao, assetDao, holdingDao, new(proxymocks.PaymentProxy), resultProducer)
-	orderDao.On("GetByOrderNo", mock.Anything, "AO1").Return(sampleOrder(1, 1, model.OrderStatusPending), nil)
+	svc := newOrderServiceForTest(orderDao, assetDao, holdingDao, ledgerDao, new(proxymocks.PaymentProxy), resultProducer)
+	order := sampleOrder(1, 1, model.OrderStatusPending)
+	orderDao.On("GetByOrderNo", mock.Anything, "AO1").Return(order, nil)
 	orderDao.On("UpdatePaymentResult", mock.Anything, mock.AnythingOfType("*gorm.DB"), int64(1), "pay", model.OrderStatusPending, model.OrderStatusPaySucceed).
 		Return(int64(1), nil)
-	holdingDao.On("UpsertAddQuantity", mock.Anything, mock.AnythingOfType("*gorm.DB"), int64(1), int64(1), mock.Anything).Return(nil)
+	holdingDao.On("UpsertAddQuantity", mock.Anything, mock.AnythingOfType("*gorm.DB"), int64(1), int64(1), mock.Anything).
+		Return(decimal.RequireFromString("1.5"), nil)
+	ledgerDao.On("Create", mock.Anything, mock.AnythingOfType("*gorm.DB"), mock.MatchedBy(func(l *model.AccountLedger) bool {
+		return l.BusinessType == model.LedgerBusinessTypePurchase &&
+			l.BusinessID == order.OrderNo &&
+			l.AssetCode == "BTC" &&
+			l.ChangeAmount.Equal(decimal.RequireFromString("0.5")) &&
+			l.BalanceAfter.Equal(decimal.RequireFromString("1.5"))
+	})).Return(nil)
 	assetDao.On("GetByID", mock.Anything, int64(1)).Return(sampleAsset(1), nil)
 	resultProducer.On("PublishOrderPaymentResult", mock.Anything, mock.Anything).Return(nil)
 	require.NoError(t, svc.HandlePaymentResult(context.Background(), PaymentResultInput{
 		BizID: "AO1", PaymentID: "pay", EventType: paymentEventSucceeded,
 	}))
+	ledgerDao.AssertExpectations(t)
+}
+
+func TestHandlePaymentResult_SucceedLedgerError(t *testing.T) {
+	initServiceTestEnv(t)
+	orderDao := new(daomocks.AssetOrderDao)
+	assetDao := new(daomocks.AssetDao)
+	holdingDao := new(daomocks.UserAssetHoldingDao)
+	ledgerDao := new(daomocks.AccountLedgerDao)
+	svc := newOrderServiceForTest(orderDao, assetDao, holdingDao, ledgerDao, new(proxymocks.PaymentProxy), new(producermocks.OrderPaymentResultProducer))
+	orderDao.On("GetByOrderNo", mock.Anything, "AO1").Return(sampleOrder(1, 1, model.OrderStatusPending), nil)
+	orderDao.On("UpdatePaymentResult", mock.Anything, mock.AnythingOfType("*gorm.DB"), int64(1), "pay", model.OrderStatusPending, model.OrderStatusPaySucceed).
+		Return(int64(1), nil)
+	holdingDao.On("UpsertAddQuantity", mock.Anything, mock.AnythingOfType("*gorm.DB"), int64(1), int64(1), mock.Anything).
+		Return(decimal.RequireFromString("0.5"), nil)
+	assetDao.On("GetByID", mock.Anything, int64(1)).Return(sampleAsset(1), nil)
+	ledgerDao.On("Create", mock.Anything, mock.AnythingOfType("*gorm.DB"), mock.AnythingOfType("*model.AccountLedger")).
+		Return(errors.New("ledger failed"))
+	require.ErrorContains(t, svc.HandlePaymentResult(context.Background(), PaymentResultInput{
+		BizID: "AO1", PaymentID: "pay", EventType: paymentEventSucceeded,
+	}), "ledger failed")
+}
+
+func TestHandlePaymentResult_SucceedAlreadySettledSkipsLedger(t *testing.T) {
+	initServiceTestEnv(t)
+	orderDao := new(daomocks.AssetOrderDao)
+	holdingDao := new(daomocks.UserAssetHoldingDao)
+	ledgerDao := new(daomocks.AccountLedgerDao)
+	svc := newOrderServiceForTest(orderDao, new(daomocks.AssetDao), holdingDao, ledgerDao, new(proxymocks.PaymentProxy), new(producermocks.OrderPaymentResultProducer))
+	orderDao.On("GetByOrderNo", mock.Anything, "AO1").Return(sampleOrder(1, 1, model.OrderStatusPending), nil)
+	orderDao.On("UpdatePaymentResult", mock.Anything, mock.AnythingOfType("*gorm.DB"), int64(1), "pay", model.OrderStatusPending, model.OrderStatusPaySucceed).
+		Return(int64(0), nil)
+	require.NoError(t, svc.HandlePaymentResult(context.Background(), PaymentResultInput{
+		BizID: "AO1", PaymentID: "pay", EventType: paymentEventSucceeded,
+	}))
+	holdingDao.AssertNotCalled(t, "UpsertAddQuantity", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+	ledgerDao.AssertNotCalled(t, "Create", mock.Anything, mock.Anything, mock.Anything)
 }
 
 func TestGetOrderDetail_Success(t *testing.T) {
 	initServiceTestEnv(t)
 	orderDao := new(daomocks.AssetOrderDao)
 	assetDao := new(daomocks.AssetDao)
-	svc := newOrderServiceForTest(orderDao, assetDao, new(daomocks.UserAssetHoldingDao), new(proxymocks.PaymentProxy), new(producermocks.OrderPaymentResultProducer))
+	svc := newOrderServiceForTest(orderDao, assetDao, new(daomocks.UserAssetHoldingDao), new(daomocks.AccountLedgerDao), new(proxymocks.PaymentProxy), new(producermocks.OrderPaymentResultProducer))
 	orderDao.On("GetByID", mock.Anything, int64(5)).Return(sampleOrder(5, 42, model.OrderStatusPending), nil)
 	assetDao.On("GetByID", mock.Anything, int64(1)).Return(sampleAsset(1), nil)
 
@@ -363,7 +426,7 @@ func TestGetOrderDetail_Success(t *testing.T) {
 func TestGetOrderDetail_NotOwned(t *testing.T) {
 	initServiceTestEnv(t)
 	orderDao := new(daomocks.AssetOrderDao)
-	svc := newOrderServiceForTest(orderDao, new(daomocks.AssetDao), new(daomocks.UserAssetHoldingDao), new(proxymocks.PaymentProxy), new(producermocks.OrderPaymentResultProducer))
+	svc := newOrderServiceForTest(orderDao, new(daomocks.AssetDao), new(daomocks.UserAssetHoldingDao), new(daomocks.AccountLedgerDao), new(proxymocks.PaymentProxy), new(producermocks.OrderPaymentResultProducer))
 	orderDao.On("GetByID", mock.Anything, int64(5)).Return(sampleOrder(5, 99, model.OrderStatusPending), nil)
 	_, err := svc.GetOrderDetail(context.Background(), 42, 5)
 	require.ErrorContains(t, err, "not found")
@@ -372,7 +435,7 @@ func TestGetOrderDetail_NotOwned(t *testing.T) {
 func TestGetOrderDetail_NilOrder(t *testing.T) {
 	initServiceTestEnv(t)
 	orderDao := new(daomocks.AssetOrderDao)
-	svc := newOrderServiceForTest(orderDao, new(daomocks.AssetDao), new(daomocks.UserAssetHoldingDao), new(proxymocks.PaymentProxy), new(producermocks.OrderPaymentResultProducer))
+	svc := newOrderServiceForTest(orderDao, new(daomocks.AssetDao), new(daomocks.UserAssetHoldingDao), new(daomocks.AccountLedgerDao), new(proxymocks.PaymentProxy), new(producermocks.OrderPaymentResultProducer))
 	orderDao.On("GetByID", mock.Anything, int64(1)).Return(nil, nil)
 	_, err := svc.GetOrderDetail(context.Background(), 1, 1)
 	require.ErrorContains(t, err, "not found")
@@ -381,7 +444,7 @@ func TestGetOrderDetail_NilOrder(t *testing.T) {
 func TestGetOrderDetail_DAOError(t *testing.T) {
 	initServiceTestEnv(t)
 	orderDao := new(daomocks.AssetOrderDao)
-	svc := newOrderServiceForTest(orderDao, new(daomocks.AssetDao), new(daomocks.UserAssetHoldingDao), new(proxymocks.PaymentProxy), new(producermocks.OrderPaymentResultProducer))
+	svc := newOrderServiceForTest(orderDao, new(daomocks.AssetDao), new(daomocks.UserAssetHoldingDao), new(daomocks.AccountLedgerDao), new(proxymocks.PaymentProxy), new(producermocks.OrderPaymentResultProducer))
 	orderDao.On("GetByID", mock.Anything, int64(1)).Return(nil, errors.New("db"))
 	_, err := svc.GetOrderDetail(context.Background(), 1, 1)
 	require.Error(t, err)
@@ -391,7 +454,7 @@ func TestGetOrderDetail_AssetDAOError(t *testing.T) {
 	initServiceTestEnv(t)
 	orderDao := new(daomocks.AssetOrderDao)
 	assetDao := new(daomocks.AssetDao)
-	svc := newOrderServiceForTest(orderDao, assetDao, new(daomocks.UserAssetHoldingDao), new(proxymocks.PaymentProxy), new(producermocks.OrderPaymentResultProducer))
+	svc := newOrderServiceForTest(orderDao, assetDao, new(daomocks.UserAssetHoldingDao), new(daomocks.AccountLedgerDao), new(proxymocks.PaymentProxy), new(producermocks.OrderPaymentResultProducer))
 	orderDao.On("GetByID", mock.Anything, int64(5)).Return(sampleOrder(5, 42, model.OrderStatusPending), nil)
 	assetDao.On("GetByID", mock.Anything, int64(1)).Return(nil, errors.New("asset db"))
 
@@ -403,7 +466,7 @@ func TestListOrders_WithCursor(t *testing.T) {
 	initServiceTestEnv(t)
 	orderDao := new(daomocks.AssetOrderDao)
 	assetDao := new(daomocks.AssetDao)
-	svc := newOrderServiceForTest(orderDao, assetDao, new(daomocks.UserAssetHoldingDao), new(proxymocks.PaymentProxy), new(producermocks.OrderPaymentResultProducer))
+	svc := newOrderServiceForTest(orderDao, assetDao, new(daomocks.UserAssetHoldingDao), new(daomocks.AccountLedgerDao), new(proxymocks.PaymentProxy), new(producermocks.OrderPaymentResultProducer))
 	o1 := sampleOrder(3, 1, model.OrderStatusPending)
 	o2 := sampleOrder(2, 1, model.OrderStatusPending)
 	o3 := sampleOrder(1, 1, model.OrderStatusPending)
@@ -421,7 +484,7 @@ func TestListOrders_WithCursor(t *testing.T) {
 func TestListOrders_DefaultLimit(t *testing.T) {
 	initServiceTestEnv(t)
 	orderDao := new(daomocks.AssetOrderDao)
-	svc := newOrderServiceForTest(orderDao, new(daomocks.AssetDao), new(daomocks.UserAssetHoldingDao), new(proxymocks.PaymentProxy), new(producermocks.OrderPaymentResultProducer))
+	svc := newOrderServiceForTest(orderDao, new(daomocks.AssetDao), new(daomocks.UserAssetHoldingDao), new(daomocks.AccountLedgerDao), new(proxymocks.PaymentProxy), new(producermocks.OrderPaymentResultProducer))
 	orderDao.On("ListByCursor", mock.Anything, mock.Anything).Return([]*model.AssetOrder{}, nil)
 	list, err := svc.ListOrders(context.Background(), ListOrdersQuery{UserID: 1})
 	require.NoError(t, err)
@@ -431,7 +494,7 @@ func TestListOrders_DefaultLimit(t *testing.T) {
 func TestListOrders_DAOError(t *testing.T) {
 	initServiceTestEnv(t)
 	orderDao := new(daomocks.AssetOrderDao)
-	svc := newOrderServiceForTest(orderDao, new(daomocks.AssetDao), new(daomocks.UserAssetHoldingDao), new(proxymocks.PaymentProxy), new(producermocks.OrderPaymentResultProducer))
+	svc := newOrderServiceForTest(orderDao, new(daomocks.AssetDao), new(daomocks.UserAssetHoldingDao), new(daomocks.AccountLedgerDao), new(proxymocks.PaymentProxy), new(producermocks.OrderPaymentResultProducer))
 	orderDao.On("ListByCursor", mock.Anything, mock.Anything).Return(nil, errors.New("db"))
 	_, err := svc.ListOrders(context.Background(), ListOrdersQuery{UserID: 1, Limit: 10})
 	require.Error(t, err)
@@ -441,7 +504,7 @@ func TestListOrders_GetByIDsError(t *testing.T) {
 	initServiceTestEnv(t)
 	orderDao := new(daomocks.AssetOrderDao)
 	assetDao := new(daomocks.AssetDao)
-	svc := newOrderServiceForTest(orderDao, assetDao, new(daomocks.UserAssetHoldingDao), new(proxymocks.PaymentProxy), new(producermocks.OrderPaymentResultProducer))
+	svc := newOrderServiceForTest(orderDao, assetDao, new(daomocks.UserAssetHoldingDao), new(daomocks.AccountLedgerDao), new(proxymocks.PaymentProxy), new(producermocks.OrderPaymentResultProducer))
 	orderDao.On("ListByCursor", mock.Anything, mock.Anything).
 		Return([]*model.AssetOrder{sampleOrder(1, 1, model.OrderStatusPending)}, nil)
 	assetDao.On("GetByIDs", mock.Anything, []int64{1}).Return(nil, errors.New("assets db"))
@@ -453,7 +516,7 @@ func TestListOrders_GetByIDsError(t *testing.T) {
 func TestToOrderVOWithAsset_AssetLoadErrorDegrades(t *testing.T) {
 	initServiceTestEnv(t)
 	assetDao := new(daomocks.AssetDao)
-	svc := newOrderServiceForTest(new(daomocks.AssetOrderDao), assetDao, new(daomocks.UserAssetHoldingDao), new(proxymocks.PaymentProxy), new(producermocks.OrderPaymentResultProducer))
+	svc := newOrderServiceForTest(new(daomocks.AssetOrderDao), assetDao, new(daomocks.UserAssetHoldingDao), new(daomocks.AccountLedgerDao), new(proxymocks.PaymentProxy), new(producermocks.OrderPaymentResultProducer))
 	assetDao.On("GetByID", mock.Anything, int64(1)).Return(nil, errors.New("asset db"))
 
 	vo := svc.toOrderVOWithAsset(context.Background(), sampleOrder(9, 1, model.OrderStatusPending))
@@ -480,7 +543,7 @@ func TestMapPaymentHelpers(t *testing.T) {
 func TestPublishOrderPaymentResult_AssetLoadError(t *testing.T) {
 	initServiceTestEnv(t)
 	assetDao := new(daomocks.AssetDao)
-	svc := newOrderServiceForTest(new(daomocks.AssetOrderDao), assetDao, new(daomocks.UserAssetHoldingDao), new(proxymocks.PaymentProxy), new(producermocks.OrderPaymentResultProducer))
+	svc := newOrderServiceForTest(new(daomocks.AssetOrderDao), assetDao, new(daomocks.UserAssetHoldingDao), new(daomocks.AccountLedgerDao), new(proxymocks.PaymentProxy), new(producermocks.OrderPaymentResultProducer))
 	assetDao.On("GetByID", mock.Anything, int64(1)).Return(nil, errors.New("db"))
 	err := svc.publishOrderPaymentResult(context.Background(), sampleOrder(1, 1, model.OrderStatusPayFail), "pay", model.OrderStatusPayFail)
 	require.Error(t, err)
@@ -490,7 +553,7 @@ func TestPublishOrderPaymentResult_PublishError(t *testing.T) {
 	initServiceTestEnv(t)
 	assetDao := new(daomocks.AssetDao)
 	resultProducer := new(producermocks.OrderPaymentResultProducer)
-	svc := newOrderServiceForTest(new(daomocks.AssetOrderDao), assetDao, new(daomocks.UserAssetHoldingDao), new(proxymocks.PaymentProxy), resultProducer)
+	svc := newOrderServiceForTest(new(daomocks.AssetOrderDao), assetDao, new(daomocks.UserAssetHoldingDao), new(daomocks.AccountLedgerDao), new(proxymocks.PaymentProxy), resultProducer)
 	assetDao.On("GetByID", mock.Anything, int64(1)).Return(sampleAsset(1), nil)
 	resultProducer.On("PublishOrderPaymentResult", mock.Anything, mock.Anything).Return(errors.New("kafka"))
 	err := svc.publishOrderPaymentResult(context.Background(), sampleOrder(1, 1, model.OrderStatusPayFail), "pay", model.OrderStatusPayFail)
@@ -501,7 +564,7 @@ func TestPublishOrderPaymentResult_NilAsset(t *testing.T) {
 	initServiceTestEnv(t)
 	assetDao := new(daomocks.AssetDao)
 	resultProducer := new(producermocks.OrderPaymentResultProducer)
-	svc := newOrderServiceForTest(new(daomocks.AssetOrderDao), assetDao, new(daomocks.UserAssetHoldingDao), new(proxymocks.PaymentProxy), resultProducer)
+	svc := newOrderServiceForTest(new(daomocks.AssetOrderDao), assetDao, new(daomocks.UserAssetHoldingDao), new(daomocks.AccountLedgerDao), new(proxymocks.PaymentProxy), resultProducer)
 	assetDao.On("GetByID", mock.Anything, int64(1)).Return(nil, nil)
 	resultProducer.On("PublishOrderPaymentResult", mock.Anything, mock.MatchedBy(func(e kproducer.OrderPaymentResultEvent) bool {
 		return e.AssetSymbol == ""

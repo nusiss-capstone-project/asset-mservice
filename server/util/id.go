@@ -22,3 +22,11 @@ func NewOrderNo() (string, error) {
 	}
 	return fmt.Sprintf("AO%s%s", time.Now().UTC().Format("20060102"), hex.EncodeToString(b)), nil
 }
+
+func NewLedgerNo() (string, error) {
+	b := make([]byte, 4)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("AL%s%s", time.Now().UTC().Format("20060102"), hex.EncodeToString(b)), nil
+}

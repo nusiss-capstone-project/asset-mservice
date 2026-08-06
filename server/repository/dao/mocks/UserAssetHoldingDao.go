@@ -80,25 +80,36 @@ func (_m *UserAssetHoldingDao) ListByUser(ctx context.Context, userID int64, ass
 }
 
 // UpsertAddQuantity provides a mock function with given fields: ctx, tx, userID, assetID, quantity
-func (_m *UserAssetHoldingDao) UpsertAddQuantity(ctx context.Context, tx *gorm.DB, userID int64, assetID int64, quantity decimal.Decimal) error {
+func (_m *UserAssetHoldingDao) UpsertAddQuantity(ctx context.Context, tx *gorm.DB, userID int64, assetID int64, quantity decimal.Decimal) (decimal.Decimal, error) {
 	ret := _m.Called(ctx, tx, userID, assetID, quantity)
 
 	if len(ret) == 0 {
 		panic("no return value specified for UpsertAddQuantity")
 	}
 
-	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, *gorm.DB, int64, int64, decimal.Decimal) error); ok {
+	var r0 decimal.Decimal
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, *gorm.DB, int64, int64, decimal.Decimal) (decimal.Decimal, error)); ok {
+		return rf(ctx, tx, userID, assetID, quantity)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, *gorm.DB, int64, int64, decimal.Decimal) decimal.Decimal); ok {
 		r0 = rf(ctx, tx, userID, assetID, quantity)
 	} else {
-		r0 = ret.Error(0)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(decimal.Decimal)
+		}
 	}
 
-	return r0
+	if rf, ok := ret.Get(1).(func(context.Context, *gorm.DB, int64, int64, decimal.Decimal) error); ok {
+		r1 = rf(ctx, tx, userID, assetID, quantity)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
 }
 
 // NewUserAssetHoldingDao creates a new instance of UserAssetHoldingDao. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
-// The first argument is typically a *testing.T value.
 func NewUserAssetHoldingDao(t interface {
 	mock.TestingT
 	Cleanup(func())

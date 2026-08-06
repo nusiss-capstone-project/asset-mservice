@@ -52,6 +52,22 @@ CREATE TABLE IF NOT EXISTS `user_asset_holdings` (
   KEY `idx_user_asset_holdings_asset_id` (`asset_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE IF NOT EXISTS `account_ledger` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `ledger_no` varchar(64) NOT NULL,
+  `user_id` bigint NOT NULL,
+  `asset_code` varchar(32) NOT NULL,
+  `change_amount` decimal(36,18) NOT NULL,
+  `business_type` varchar(32) NOT NULL,
+  `business_id` varchar(128) NOT NULL,
+  `balance_after` decimal(36,18) NOT NULL,
+  `created_at` datetime(3) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uni_account_ledger_ledger_no` (`ledger_no`),
+  UNIQUE KEY `uk_ledger_biz` (`business_type`, `business_id`, `asset_code`),
+  KEY `idx_account_ledger_user_id` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- Mock assets for local/dev testing (USD quotes)
 INSERT INTO `assets` (`id`, `name`, `symbol`, `icon_url`, `currency`, `current_price`, `status`, `created_at`, `updated_at`)
 VALUES

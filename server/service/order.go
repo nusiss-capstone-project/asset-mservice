@@ -63,10 +63,11 @@ type OrderService interface {
 }
 
 type OrderServiceImpl struct {
-	orderDao                  dao.AssetOrderDao
-	assetDao                  dao.AssetDao
-	holdingDao                dao.UserAssetHoldingDao
-	paymentProxy              proxy.PaymentProxy
+	orderDao                   dao.AssetOrderDao
+	assetDao                   dao.AssetDao
+	holdingDao                 dao.UserAssetHoldingDao
+	ledgerDao                  dao.AccountLedgerDao
+	paymentProxy               proxy.PaymentProxy
 	orderPaymentResultProducer kproducer.OrderPaymentResultProducer
 }
 
@@ -81,6 +82,7 @@ func GetOrderService() OrderService {
 			orderDao:                   dao.GetAssetOrderDao(),
 			assetDao:                   dao.GetAssetDao(),
 			holdingDao:                 dao.GetUserAssetHoldingDao(),
+			ledgerDao:                  dao.GetAccountLedgerDao(),
 			paymentProxy:               proxy.GetPaymentProxy(),
 			orderPaymentResultProducer: kproducer.GetOrderPaymentResultProducer(),
 		}
@@ -366,7 +368,31 @@ func (s *OrderServiceImpl) applyPaymentResult(ctx context.Context, order *model.
 			)
 			return errOrderAlreadySettled
 		}
-		if err := s.holdingDao.UpsertAddQuantity(ctx, tx, order.UserID, order.AssetID, order.Quantity); err != nil {
+		balanceAfter, err := s.holdingDao.UpsertAddQuantity(ctx, tx, order.UserID, order.AssetID, order.Quantity)
+		if err != nil {
+			return err
+		}
+		asset, err := s.assetDao.GetByID(ctx, order.AssetID)
+		if err != nil {
+			return err
+		}
+		if asset == nil {
+			return fmt.Errorf("asset not found: %d", order.AssetID)
+		}
+		ledgerNo, err := util.NewLedgerNo()
+		if err != nil {
+			return err
+		}
+		ledger := &model.AccountLedger{
+			LedgerNo:     ledgerNo,
+			UserID:       order.UserID,
+			AssetCode:    asset.Symbol,
+			ChangeAmount: order.Quantity,
+			BusinessType: model.LedgerBusinessTypePurchase,
+			BusinessID:   order.OrderNo,
+			BalanceAfter: balanceAfter,
+		}
+		if err := s.ledgerDao.Create(ctx, tx, ledger); err != nil {
 			return err
 		}
 		log.WithContext(ctx).Infow("order settled successfully",
@@ -388,7 +414,6 @@ func (s *OrderServiceImpl) applyPaymentResult(ctx context.Context, order *model.
 }
 
 var errOrderAlreadySettled = errors.New("order already settled")
-
 func (s *OrderServiceImpl) publishOrderPaymentResult(
 	ctx context.Context,
 	order *model.AssetOrder,

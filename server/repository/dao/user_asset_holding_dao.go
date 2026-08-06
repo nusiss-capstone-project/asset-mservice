@@ -16,7 +16,7 @@ import (
 type UserAssetHoldingDao interface {
 	GetByUserAndAsset(ctx context.Context, userID, assetID int64) (*model.UserAssetHolding, error)
 	ListByUser(ctx context.Context, userID, assetID int64) ([]*model.UserAssetHolding, error)
-	UpsertAddQuantity(ctx context.Context, tx *gorm.DB, userID, assetID int64, quantity decimal.Decimal) error
+	UpsertAddQuantity(ctx context.Context, tx *gorm.DB, userID, assetID int64, quantity decimal.Decimal) (decimal.Decimal, error)
 }
 
 type UserAssetHoldingDaoImpl struct {
@@ -74,13 +74,14 @@ func (dao *UserAssetHoldingDaoImpl) dbOr(tx *gorm.DB) *gorm.DB {
 	return dao.db
 }
 
-func (dao *UserAssetHoldingDaoImpl) UpsertAddQuantity(ctx context.Context, tx *gorm.DB, userID, assetID int64, quantity decimal.Decimal) error {
+func (dao *UserAssetHoldingDaoImpl) UpsertAddQuantity(ctx context.Context, tx *gorm.DB, userID, assetID int64, quantity decimal.Decimal) (decimal.Decimal, error) {
 	holding := &model.UserAssetHolding{
 		UserID:   userID,
 		AssetID:  assetID,
 		Quantity: quantity,
 	}
-	err := dao.dbOr(tx).WithContext(ctx).Clauses(clause.OnConflict{
+	db := dao.dbOr(tx).WithContext(ctx)
+	err := db.Clauses(clause.OnConflict{
 		Columns: []clause.Column{{Name: "user_id"}, {Name: "asset_id"}},
 		DoUpdates: clause.Assignments(map[string]interface{}{
 			"quantity":   gorm.Expr("quantity + ?", quantity),
@@ -94,12 +95,24 @@ func (dao *UserAssetHoldingDaoImpl) UpsertAddQuantity(ctx context.Context, tx *g
 			"quantity", quantity.String(),
 			"error", err,
 		)
-		return err
+		return decimal.Zero, err
 	}
+
+	var updated model.UserAssetHolding
+	if err := db.Where("user_id = ? AND asset_id = ?", userID, assetID).First(&updated).Error; err != nil {
+		log.WithContext(ctx).Errorw("read user asset holding after upsert failed",
+			"user_id", userID,
+			"asset_id", assetID,
+			"error", err,
+		)
+		return decimal.Zero, err
+	}
+
 	log.WithContext(ctx).Infow("user asset holding upserted",
 		"user_id", userID,
 		"asset_id", assetID,
 		"quantity_added", quantity.String(),
+		"balance_after", updated.Quantity.String(),
 	)
-	return nil
+	return updated.Quantity, nil
 }
