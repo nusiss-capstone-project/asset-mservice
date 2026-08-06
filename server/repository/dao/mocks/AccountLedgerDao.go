@@ -9,6 +9,7 @@ import (
 
 	mock "github.com/stretchr/testify/mock"
 
+	dao "github.com/nusiss-capstone-project/asset-mservice/server/repository/dao"
 	model "github.com/nusiss-capstone-project/asset-mservice/server/repository/model"
 )
 
@@ -63,6 +64,17 @@ func (_m *AccountLedgerDao) GetByBusinessKey(ctx context.Context, tx *gorm.DB, b
 	}
 
 	return r0, r1
+}
+
+// ListByCursor provides a mock function with given fields: ctx, filter
+func (_m *AccountLedgerDao) ListByCursor(ctx context.Context, filter dao.AccountLedgerListFilter) ([]*model.AccountLedger, error) {
+	ret := _m.Called(ctx, filter)
+
+	var r0 []*model.AccountLedger
+	if ret.Get(0) != nil {
+		r0 = ret.Get(0).([]*model.AccountLedger)
+	}
+	return r0, ret.Error(1)
 }
 
 // NewAccountLedgerDao creates a new instance of AccountLedgerDao. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.

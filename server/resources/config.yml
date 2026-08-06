@@ -22,6 +22,10 @@ payment_grpc:
   host: "127.0.0.1"
   port: 5002
 
+identity:
+  host: "127.0.0.1"
+  port: 5003
+
 kafka:
   enabled: false
   brokers:

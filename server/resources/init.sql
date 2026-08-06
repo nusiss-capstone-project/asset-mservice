@@ -65,7 +65,42 @@ CREATE TABLE IF NOT EXISTS `account_ledger` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `uni_account_ledger_ledger_no` (`ledger_no`),
   UNIQUE KEY `uk_ledger_biz` (`business_type`, `business_id`, `asset_code`),
-  KEY `idx_account_ledger_user_id` (`user_id`)
+  KEY `idx_account_ledger_user_id` (`user_id`),
+  KEY `idx_account_ledger_user_created` (`user_id`, `id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS `user_fiat_accounts` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `user_id` bigint NOT NULL,
+  `currency` varchar(16) NOT NULL,
+  `balance` decimal(36,18) NOT NULL,
+  `created_at` datetime(3) DEFAULT NULL,
+  `updated_at` datetime(3) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_user_fiat_currency` (`user_id`, `currency`),
+  KEY `idx_user_fiat_accounts_user_id` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS `fiat_transactions` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `transaction_no` varchar(64) NOT NULL,
+  `user_id` bigint NOT NULL,
+  `idempotent_key` varchar(128) NOT NULL,
+  `account_id` bigint NOT NULL DEFAULT 0,
+  `amount` decimal(36,18) NOT NULL,
+  `currency` varchar(16) NOT NULL,
+  `transaction_type` varchar(32) NOT NULL,
+  `status` varchar(32) NOT NULL,
+  `payment_method_id` bigint NOT NULL,
+  `external_payment_id` varchar(128) DEFAULT NULL,
+  `failure_reason` varchar(512) DEFAULT NULL,
+  `created_at` datetime(3) DEFAULT NULL,
+  `updated_at` datetime(3) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uni_fiat_transactions_transaction_no` (`transaction_no`),
+  UNIQUE KEY `uk_fiat_user_idempotent` (`user_id`, `idempotent_key`),
+  KEY `idx_fiat_transactions_user_id` (`user_id`),
+  KEY `idx_fiat_transactions_status` (`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Mock assets for local/dev testing (USD quotes)

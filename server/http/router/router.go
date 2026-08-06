@@ -49,6 +49,9 @@ func NewRouter() *gin.Engine {
 		webGroup.GET("/orders", auth, api.ListOrders)
 		webGroup.GET("/orders/:order_id", auth, api.GetOrder)
 		webGroup.GET("/holdings", auth, api.ListHoldings)
+		webGroup.POST("/deposit", auth, api.CreateDeposit)
+		webGroup.GET("/fiat-accounts", auth, api.ListFiatAccounts)
+		webGroup.GET("/ledgers", auth, api.ListLedgers)
 	}
 	return r
 }

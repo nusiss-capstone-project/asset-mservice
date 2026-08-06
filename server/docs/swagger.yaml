@@ -28,6 +28,22 @@ definitions:
       err_msg:
         type: string
     type: object
+  data.CreateDepositRequest:
+    properties:
+      amount:
+        type: string
+      currency:
+        type: string
+      idempotent_key:
+        type: string
+      payment_method_id:
+        type: integer
+    required:
+    - amount
+    - currency
+    - idempotent_key
+    - payment_method_id
+    type: object
   data.CreateOrderRequest:
     properties:
       idempotency_key:
@@ -43,6 +59,53 @@ definitions:
     - payment_method_id
     - quantity
     - quote_id
+    type: object
+  data.FiatAccountListVO:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/data.FiatAccountVO'
+        type: array
+    type: object
+  data.FiatAccountVO:
+    properties:
+      account_id:
+        type: string
+      balance:
+        type: string
+      currency:
+        type: string
+      updated_at:
+        type: integer
+    type: object
+  data.FiatTransactionVO:
+    properties:
+      account_id:
+        type: string
+      amount:
+        type: string
+      created_at:
+        type: integer
+      currency:
+        type: string
+      external_payment_id:
+        type: string
+      failure_reason:
+        type: string
+      payment_method_id:
+        type: string
+      status:
+        type: string
+      transaction_id:
+        type: string
+      transaction_no:
+        type: string
+      transaction_type:
+        type: string
+      updated_at:
+        type: integer
+      user_id:
+        type: string
     type: object
   data.GenQuoteRequest:
     properties:
@@ -89,6 +152,34 @@ definitions:
       currency:
         type: string
       unit_price:
+        type: string
+    type: object
+  data.LedgerListVO:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/data.LedgerVO'
+        type: array
+      next_cursor:
+        type: string
+    type: object
+  data.LedgerVO:
+    properties:
+      asset_code:
+        type: string
+      balance_after:
+        type: string
+      business_id:
+        type: string
+      business_type:
+        type: string
+      change_amount:
+        type: string
+      created_at:
+        type: integer
+      ledger_id:
+        type: string
+      ledger_no:
         type: string
     type: object
   data.OrderListVO:
@@ -212,6 +303,62 @@ paths:
       summary: Get asset detail
       tags:
       - Asset
+  /asset-ms/v1/web/deposit:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Deposit request
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/data.CreateDepositRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/data.BaseResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/data.FiatTransactionVO'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/data.BaseResponse'
+      summary: Create fiat deposit
+      tags:
+      - Deposit
+  /asset-ms/v1/web/fiat-accounts:
+    get:
+      parameters:
+      - description: Comma-separated currencies
+        in: query
+        name: currencies
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/data.BaseResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/data.FiatAccountListVO'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/data.BaseResponse'
+      summary: List fiat accounts for current market
+      tags:
+      - Deposit
   /asset-ms/v1/web/holdings:
     get:
       parameters:
@@ -238,6 +385,53 @@ paths:
       summary: List holdings
       tags:
       - Holding
+  /asset-ms/v1/web/ledgers:
+    get:
+      parameters:
+      - description: Last seen ledger_id
+        in: query
+        name: cursor
+        type: string
+      - default: 20
+        description: Page size
+        in: query
+        name: limit
+        type: integer
+      - description: USD or BTC
+        in: query
+        name: asset_code
+        type: string
+      - description: DEPOSIT|PURCHASE|REWARD
+        in: query
+        name: business_type
+        type: string
+      - description: Unix timestamp
+        in: query
+        name: from
+        type: integer
+      - description: Unix timestamp
+        in: query
+        name: to
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/data.BaseResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/data.LedgerListVO'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/data.BaseResponse'
+      summary: List account ledger entries
+      tags:
+      - Deposit
   /asset-ms/v1/web/orders:
     get:
       parameters:

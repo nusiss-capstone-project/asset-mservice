@@ -7,6 +7,7 @@ require (
 	github.com/gin-contrib/cors v1.7.7
 	github.com/gin-gonic/gin v1.12.0
 	github.com/nusiss-capstone-project/asset-mservice/common v0.0.2
+	github.com/nusiss-capstone-project/identity-mservice/client v0.0.3-alpha1
 	github.com/nusiss-capstone-project/identity-mservice/common v0.0.3-alpha1
 	github.com/nusiss-capstone-project/payment-mservice/common v0.0.2-alpha.1
 	github.com/redis/go-redis/v9 v9.7.3

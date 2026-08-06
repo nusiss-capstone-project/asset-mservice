@@ -123,6 +123,8 @@ github.com/modern-go/reflect2 v1.0.2/go.mod h1:yWuevngMOJpCy52FWWMvUC8ws7m/LJsjY
 github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e/go.mod h1:zD1mROLANZcx1PVRCS0qkT7pwLkGfwJo4zjcN/Tysno=
 github.com/nusiss-capstone-project/asset-mservice/common v0.0.2 h1:HFrF8VNkRvRg7rg7eHacFfZm44Ar9tgh0wBiMo9QqO0=
 github.com/nusiss-capstone-project/asset-mservice/common v0.0.2/go.mod h1:ZPaHqTSb2U/iPZBrcHfFxIAaGEBXsTGniUpOt8sbmyA=
+github.com/nusiss-capstone-project/identity-mservice/client v0.0.3-alpha1 h1:Tv7Pl7wZgRJGYzG4v9r7YMeQIr/m/TB5eleT2SEmDc0=
+github.com/nusiss-capstone-project/identity-mservice/client v0.0.3-alpha1/go.mod h1:dj+HNhaMBML2XEjAcnNRL6h6Y72MPsnlEXuTJRnkx3s=
 github.com/nusiss-capstone-project/identity-mservice/common v0.0.3-alpha1 h1:CpTjzbi2eSPj80DSIs/5bYyxIsX5uZzzda3Ak30vrnM=
 github.com/nusiss-capstone-project/identity-mservice/common v0.0.3-alpha1/go.mod h1:NI9LLqL+frasX8a7FHcbgbWsddF7FzJf4SkPWzdPgUU=
 github.com/nusiss-capstone-project/payment-mservice/common v0.0.2-alpha.1 h1:fZV6NzSdGARpk/dchoLmkybCKXN5UkNNKLP+Rql1z0E=

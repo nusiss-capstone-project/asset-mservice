@@ -11,9 +11,20 @@ import (
 	"gorm.io/gorm"
 )
 
+type AccountLedgerListFilter struct {
+	UserID       int64
+	AssetCode    string
+	BusinessType string
+	CreatedFrom  int64
+	CreatedTo    int64
+	Cursor       int64
+	Limit        int
+}
+
 type AccountLedgerDao interface {
 	Create(ctx context.Context, tx *gorm.DB, ledger *model.AccountLedger) error
 	GetByBusinessKey(ctx context.Context, tx *gorm.DB, businessType, businessID, assetCode string) (*model.AccountLedger, error)
+	ListByCursor(ctx context.Context, filter AccountLedgerListFilter) ([]*model.AccountLedger, error)
 }
 
 type AccountLedgerDaoImpl struct {
@@ -86,4 +97,33 @@ func (dao *AccountLedgerDaoImpl) GetByBusinessKey(
 		return nil, err
 	}
 	return &ledger, nil
+}
+
+func (dao *AccountLedgerDaoImpl) ListByCursor(ctx context.Context, filter AccountLedgerListFilter) ([]*model.AccountLedger, error) {
+	q := dao.db.WithContext(ctx).Model(&model.AccountLedger{}).Where("user_id = ?", filter.UserID)
+	if filter.AssetCode != "" {
+		q = q.Where("asset_code = ?", filter.AssetCode)
+	}
+	if filter.BusinessType != "" {
+		q = q.Where("business_type = ?", filter.BusinessType)
+	}
+	if filter.CreatedFrom > 0 {
+		q = q.Where("UNIX_TIMESTAMP(created_at) >= ?", filter.CreatedFrom)
+	}
+	if filter.CreatedTo > 0 {
+		q = q.Where("UNIX_TIMESTAMP(created_at) <= ?", filter.CreatedTo)
+	}
+	if filter.Cursor > 0 {
+		q = q.Where("id < ?", filter.Cursor)
+	}
+	limit := filter.Limit
+	if limit <= 0 {
+		limit = 20
+	}
+	var items []*model.AccountLedger
+	if err := q.Order("id desc").Limit(limit).Find(&items).Error; err != nil {
+		log.WithContext(ctx).Errorw("list account ledger failed", "user_id", filter.UserID, "error", err)
+		return nil, err
+	}
+	return items, nil
 }

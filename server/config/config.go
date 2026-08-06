@@ -11,12 +11,18 @@ var (
 )
 
 type Conf struct {
-	GrpcConfig         *GrpcConfig         `mapstructure:"grpc"`
-	LogConfig          *LogConfig          `mapstructure:"log"`
-	HttpConfig         *HttpConfig         `mapstructure:"http"`
-	SystemConfig       *SystemConfig       `mapstructure:"system"`
-	KafkaConfig        *KafkaConfig        `mapstructure:"kafka"`
-	PaymentGrpcConfig  *PaymentGrpcConfig  `mapstructure:"payment_grpc"`
+	GrpcConfig        *GrpcConfig         `mapstructure:"grpc"`
+	LogConfig         *LogConfig          `mapstructure:"log"`
+	HttpConfig        *HttpConfig         `mapstructure:"http"`
+	SystemConfig      *SystemConfig       `mapstructure:"system"`
+	KafkaConfig       *KafkaConfig        `mapstructure:"kafka"`
+	PaymentGrpcConfig *PaymentGrpcConfig  `mapstructure:"payment_grpc"`
+	IdentityConfig    *GrpcClientConfig   `mapstructure:"identity"`
+}
+
+type GrpcClientConfig struct {
+	Host string `mapstructure:"host"`
+	Port int    `mapstructure:"port"`
 }
 
 type HttpConfig struct {
