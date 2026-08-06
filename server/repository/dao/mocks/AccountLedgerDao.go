@@ -35,6 +35,36 @@ func (_m *AccountLedgerDao) Create(ctx context.Context, tx *gorm.DB, ledger *mod
 	return r0
 }
 
+// GetByBusinessKey provides a mock function with given fields: ctx, tx, businessType, businessID, assetCode
+func (_m *AccountLedgerDao) GetByBusinessKey(ctx context.Context, tx *gorm.DB, businessType string, businessID string, assetCode string) (*model.AccountLedger, error) {
+	ret := _m.Called(ctx, tx, businessType, businessID, assetCode)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetByBusinessKey")
+	}
+
+	var r0 *model.AccountLedger
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, *gorm.DB, string, string, string) (*model.AccountLedger, error)); ok {
+		return rf(ctx, tx, businessType, businessID, assetCode)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, *gorm.DB, string, string, string) *model.AccountLedger); ok {
+		r0 = rf(ctx, tx, businessType, businessID, assetCode)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*model.AccountLedger)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, *gorm.DB, string, string, string) error); ok {
+		r1 = rf(ctx, tx, businessType, businessID, assetCode)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // NewAccountLedgerDao creates a new instance of AccountLedgerDao. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
 func NewAccountLedgerDao(t interface {
 	mock.TestingT

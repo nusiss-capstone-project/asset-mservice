@@ -2,6 +2,7 @@ package dao
 
 import (
 	"context"
+	"errors"
 	"sync"
 
 	"github.com/nusiss-capstone-project/asset-mservice/server/log"
@@ -12,6 +13,7 @@ import (
 
 type AccountLedgerDao interface {
 	Create(ctx context.Context, tx *gorm.DB, ledger *model.AccountLedger) error
+	GetByBusinessKey(ctx context.Context, tx *gorm.DB, businessType, businessID, assetCode string) (*model.AccountLedger, error)
 }
 
 type AccountLedgerDaoImpl struct {
@@ -60,4 +62,28 @@ func (dao *AccountLedgerDaoImpl) Create(ctx context.Context, tx *gorm.DB, ledger
 		"balance_after", ledger.BalanceAfter.String(),
 	)
 	return nil
+}
+
+func (dao *AccountLedgerDaoImpl) GetByBusinessKey(
+	ctx context.Context,
+	tx *gorm.DB,
+	businessType, businessID, assetCode string,
+) (*model.AccountLedger, error) {
+	var ledger model.AccountLedger
+	err := dao.dbOr(tx).WithContext(ctx).
+		Where("business_type = ? AND business_id = ? AND asset_code = ?", businessType, businessID, assetCode).
+		First(&ledger).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		log.WithContext(ctx).Errorw("get account ledger by business key failed",
+			"business_type", businessType,
+			"business_id", businessID,
+			"asset_code", assetCode,
+			"error", err,
+		)
+		return nil, err
+	}
+	return &ledger, nil
 }

@@ -20,6 +20,7 @@ type AssetDao interface {
 	List(ctx context.Context, filter AssetListFilter) ([]*model.Asset, error)
 	GetByID(ctx context.Context, id int64) (*model.Asset, error)
 	GetByIDs(ctx context.Context, ids []int64) ([]*model.Asset, error)
+	GetBySymbol(ctx context.Context, symbol string) (*model.Asset, error)
 }
 
 type AssetDaoImpl struct {
@@ -77,4 +78,17 @@ func (dao *AssetDaoImpl) GetByIDs(ctx context.Context, ids []int64) ([]*model.As
 		return nil, err
 	}
 	return assets, nil
+}
+
+func (dao *AssetDaoImpl) GetBySymbol(ctx context.Context, symbol string) (*model.Asset, error) {
+	var asset model.Asset
+	err := dao.db.WithContext(ctx).Where("symbol = ?", symbol).Order("id asc").First(&asset).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		log.WithContext(ctx).Errorw("get asset by symbol failed", "symbol", symbol, "error", err)
+		return nil, err
+	}
+	return &asset, nil
 }

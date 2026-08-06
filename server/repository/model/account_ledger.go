@@ -8,6 +8,7 @@ import (
 
 const (
 	LedgerBusinessTypePurchase = "PURCHASE"
+	LedgerBusinessTypeReward   = "REWARD"
 )
 
 type AccountLedger struct {

@@ -106,6 +106,36 @@ func (_m *AssetDao) List(ctx context.Context, filter dao.AssetListFilter) ([]*mo
 	return r0, r1
 }
 
+// GetBySymbol provides a mock function with given fields: ctx, symbol
+func (_m *AssetDao) GetBySymbol(ctx context.Context, symbol string) (*model.Asset, error) {
+	ret := _m.Called(ctx, symbol)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetBySymbol")
+	}
+
+	var r0 *model.Asset
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, string) (*model.Asset, error)); ok {
+		return rf(ctx, symbol)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, string) *model.Asset); ok {
+		r0 = rf(ctx, symbol)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*model.Asset)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = rf(ctx, symbol)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // NewAssetDao creates a new instance of AssetDao. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
 // The first argument is typically a *testing.T value.
 func NewAssetDao(t interface {
