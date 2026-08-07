@@ -5,9 +5,8 @@ import (
 	"fmt"
 	"sync"
 
+	paymentclient "github.com/nusiss-capstone-project/payment-mservice/client"
 	"github.com/nusiss-capstone-project/payment-mservice/common/paymentpb"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 
 	"github.com/nusiss-capstone-project/asset-mservice/server/config"
 	"github.com/nusiss-capstone-project/asset-mservice/server/log"
@@ -42,23 +41,17 @@ var (
 func GetPaymentProxy() PaymentProxy {
 	paymentProxyOnce.Do(func() {
 		cfg := config.Config.PaymentGrpcConfig
-		if cfg == nil {
-			panic("payment_grpc config is nil")
+		if cfg == nil || cfg.Host == "" || cfg.Port == 0 {
+			panic("payment_grpc config (host/port) is required")
 		}
-		conn, err := grpc.NewClient(
-			fmt.Sprintf("%s:%d", cfg.Host, cfg.Port),
-			grpc.WithTransportCredentials(insecure.NewCredentials()),
-			grpc.WithDefaultCallOptions(
-				grpc.MaxCallRecvMsgSize(1024*1024),
-				grpc.MaxCallSendMsgSize(1024*1024),
-			),
-		)
+		client, err := paymentclient.GetPaymentServiceClient(&paymentclient.GRpcClientConfig{
+			Host: cfg.Host,
+			Port: cfg.Port,
+		})
 		if err != nil {
-			panic(err)
+			panic(fmt.Sprintf("init payment client: %v", err))
 		}
-		paymentProxyInst = &paymentProxyImpl{
-			client: paymentpb.NewPaymentServiceClient(conn),
-		}
+		paymentProxyInst = &paymentProxyImpl{client: client}
 		log.Logger.Infow("payment grpc client initialized", "host", cfg.Host, "port", cfg.Port)
 	})
 	return paymentProxyInst
