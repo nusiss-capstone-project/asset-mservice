@@ -30,27 +30,21 @@ func StartConsume(ctx context.Context, record *kgo.Record) (context.Context, tra
 
 // LogConsumeStart logs the entry of a consume operation.
 func LogConsumeStart(ctx context.Context, record *kgo.Record, handlerCount int) {
-	traceID, spanID := IDs(ctx)
 	log.WithContext(ctx).Infow("kafka message consume started",
 		"topic", record.Topic,
 		"partition", record.Partition,
 		"offset", record.Offset,
 		"handler_count", handlerCount,
-		"trace_id", traceID,
-		"span_id", spanID,
 	)
 }
 
 // LogConsumeFinish logs the exit of a consume operation.
 func LogConsumeFinish(ctx context.Context, record *kgo.Record, durationMs float64, err error) {
-	traceID, spanID := IDs(ctx)
 	fields := []any{
 		"topic", record.Topic,
 		"partition", record.Partition,
 		"offset", record.Offset,
 		"duration_ms", durationMs,
-		"trace_id", traceID,
-		"span_id", spanID,
 	}
 	if err != nil {
 		log.WithContext(ctx).Errorw("kafka message consume failed", append(fields, "error", err)...)

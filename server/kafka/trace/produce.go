@@ -26,20 +26,12 @@ func StartProduce(ctx context.Context, topic string, attrs ...attribute.KeyValue
 
 // LogProduceStart logs the entry of a produce operation.
 func LogProduceStart(ctx context.Context, fields ...any) {
-	traceID, spanID := IDs(ctx)
-	log.WithContext(ctx).Infow("kafka message produce started",
-		append(fields, "trace_id", traceID, "span_id", spanID)...,
-	)
+	log.WithContext(ctx).Infow("kafka message produce started", fields...)
 }
 
 // LogProduceFinish logs the exit of a produce operation.
 func LogProduceFinish(ctx context.Context, durationMs float64, err error, fields ...any) {
-	traceID, spanID := IDs(ctx)
-	all := append(fields,
-		"duration_ms", durationMs,
-		"trace_id", traceID,
-		"span_id", spanID,
-	)
+	all := append(fields, "duration_ms", durationMs)
 	if err != nil {
 		log.WithContext(ctx).Errorw("kafka message produce failed", append(all, "error", err)...)
 		return

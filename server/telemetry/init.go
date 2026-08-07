@@ -30,9 +30,17 @@ type shutdownFunc func(context.Context) error
 
 // Init configures OpenTelemetry from OTEL_* environment variables.
 // Export is intentionally optional so local/dev startup is never blocked by telemetry.
+// A local TracerProvider is always installed so HTTP/Kafka/gRPC logs can attach valid
+// trace_id/span_id even when OTLP export is disabled.
 func Init(ctx context.Context) shutdownFunc {
 	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(
 		propagation.TraceContext{}, propagation.Baggage{}))
+
+	res, err := newResource(ctx)
+	if err != nil {
+		appLog.Logger.Errorw("failed to create OpenTelemetry resource, using empty resource", "error", err)
+		res = resource.Empty()
+	}
 
 	if missing := missingOTLPConfig(); len(missing) > 0 {
 		message := "OTLP export disabled, required configuration missing"
@@ -45,7 +53,7 @@ func Init(ctx context.Context) shutdownFunc {
 			"otel_exporter_otlp_headers_set", os.Getenv("OTEL_EXPORTER_OTLP_HEADERS") != "",
 			"otel_exporter_otlp_protocol", os.Getenv("OTEL_EXPORTER_OTLP_PROTOCOL"),
 		)
-		return func(context.Context) error { return nil }
+		return installLocalTracerProvider(res)
 	}
 
 	if protocol := strings.TrimSpace(os.Getenv("OTEL_EXPORTER_OTLP_PROTOCOL")); protocol != "http/protobuf" {
@@ -53,18 +61,13 @@ func Init(ctx context.Context) shutdownFunc {
 			"otel_exporter_otlp_protocol", protocol,
 			"supported_protocol", "http/protobuf",
 		)
-		return func(context.Context) error { return nil }
+		return installLocalTracerProvider(res)
 	}
 
-	res, err := newResource(ctx)
-	if err != nil {
-		appLog.Logger.Errorw("failed to create OpenTelemetry resource, telemetry export disabled", "error", err)
-		return func(context.Context) error { return nil }
-	}
 	tp, err := initTracer(ctx, res)
 	if err != nil {
-		appLog.Logger.Errorw("failed to initialize trace exporter, telemetry export disabled", "error", err)
-		return func(context.Context) error { return nil }
+		appLog.Logger.Errorw("failed to initialize trace exporter, falling back to local tracer", "error", err)
+		return installLocalTracerProvider(res)
 	}
 	mp, err := initMetrics(ctx, res)
 	if err != nil {
@@ -110,6 +113,21 @@ func initTracer(ctx context.Context, res *resource.Resource) (*sdktrace.TracerPr
 	)
 	otel.SetTracerProvider(tp)
 	return tp, nil
+}
+
+// installLocalTracerProvider enables in-process span creation for log correlation without exporting.
+func installLocalTracerProvider(res *resource.Resource) shutdownFunc {
+	tp := sdktrace.NewTracerProvider(
+		sdktrace.WithSampler(sdktrace.AlwaysSample()),
+		sdktrace.WithResource(res),
+	)
+	otel.SetTracerProvider(tp)
+	appLog.Logger.Infow("local OpenTelemetry tracer enabled for log correlation",
+		"traces_export_enabled", false,
+	)
+	return func(ctx context.Context) error {
+		return tp.Shutdown(ctx)
+	}
 }
 
 func initMetrics(ctx context.Context, res *resource.Resource) (*sdkmetric.MeterProvider, error) {
