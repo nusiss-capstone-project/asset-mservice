@@ -11,10 +11,18 @@ var (
 )
 
 type Conf struct {
-	GrpcConfig   *GrpcConfig   `mapstructure:"grpc"`
-	LogConfig    *LogConfig    `mapstructure:"log"`
-	HttpConfig   *HttpConfig   `mapstructure:"http"`
-	SystemConfig *SystemConfig `mapstructure:"system"`
+	GrpcConfig        *GrpcConfig         `mapstructure:"grpc"`
+	LogConfig         *LogConfig          `mapstructure:"log"`
+	HttpConfig        *HttpConfig         `mapstructure:"http"`
+	SystemConfig      *SystemConfig       `mapstructure:"system"`
+	KafkaConfig       *KafkaConfig        `mapstructure:"kafka"`
+	PaymentGrpcConfig *PaymentGrpcConfig  `mapstructure:"payment_grpc"`
+	IdentityConfig    *GrpcClientConfig   `mapstructure:"identity"`
+}
+
+type GrpcClientConfig struct {
+	Host string `mapstructure:"host"`
+	Port int    `mapstructure:"port"`
 }
 
 type HttpConfig struct {
@@ -36,6 +44,19 @@ type GrpcConfig struct {
 
 type SystemConfig struct {
 	AllowedOrigins []string `mapstructure:"allowed_origins"`
+}
+
+type KafkaConfig struct {
+	Enabled  bool     `mapstructure:"enabled"`
+	Brokers  []string `mapstructure:"brokers"`
+	GroupID  string   `mapstructure:"group_id"`
+	ClientID string   `mapstructure:"client_id"`
+	Topics   []string `mapstructure:"topics"`
+}
+
+type PaymentGrpcConfig struct {
+	Host string `mapstructure:"host"`
+	Port int    `mapstructure:"port"`
 }
 
 func Init() {

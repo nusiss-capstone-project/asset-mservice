@@ -25,24 +25,40 @@ func NewRouter() *gin.Engine {
 	r := gin.New()
 	r.Use(log.RecoveryMiddleware())
 	r.Use(otelgin.Middleware(data.ServiceName))
-	r.Use(log.HTTPObservabilityMiddleware())
+	r.Use(log.HTTPResponseIDMiddleware())
 	r.Use(corsMiddleware())
 
 	basicGroup := r.Group(serviceURIPrefix)
 	{
-		basicGroup.GET("/swagger/*any", gs.WrapHandler(
-			swaggerFiles.Handler,
-			gs.URL("/asset-ms/v1/swagger/doc.json"),
-		))
+		// High-frequency / non-business routes: no HTTP access log.
 		basicGroup.GET("/ping", func(c *gin.Context) {
 			c.JSON(200, gin.H{
 				"message": "pong",
 			})
 		})
-		webGroup := basicGroup.Group("/web")
+		basicGroup.GET("/swagger/*any", gs.WrapHandler(
+			swaggerFiles.Handler,
+			gs.URL("/asset-ms/v1/swagger/doc.json"),
+		))
+	}
 
-		webGroup.POST("/items", commonauth.RequireUser(), api.CreateItem)
-		webGroup.GET("/items/:item_id", commonauth.RequireUser(), api.GetItems)
+	// Business routes: enable request access logging.
+	apiGroup := basicGroup.Group("")
+	apiGroup.Use(log.HTTPObservabilityMiddleware())
+	{
+		webGroup := apiGroup.Group("/web")
+		auth := commonauth.RequireUser()
+
+		webGroup.GET("/assets", auth, api.ListAssets)
+		webGroup.GET("/assets/:asset_id", auth, api.GetAsset)
+		webGroup.POST("/quotes", auth, api.GenQuote)
+		webGroup.POST("/orders", auth, api.CreateOrder)
+		webGroup.GET("/orders", auth, api.ListOrders)
+		webGroup.GET("/orders/:order_id", auth, api.GetOrder)
+		webGroup.GET("/holdings", auth, api.ListHoldings)
+		webGroup.POST("/deposit", auth, api.CreateDeposit)
+		webGroup.GET("/fiat-accounts", auth, api.ListFiatAccounts)
+		webGroup.GET("/ledgers", auth, api.ListLedgers)
 	}
 	return r
 }
@@ -55,10 +71,12 @@ func corsMiddleware() gin.HandlerFunc {
 		},
 		AllowHeaders: []string{
 			"Origin", "Content-Type", "Accept", "Authorization",
-			commonauth.HeaderInternalUserID, commonauth.HeaderUserRole, log.RequestIDHeader,
+			commonauth.HeaderInternalUserID, commonauth.HeaderUserRole,
+			log.RequestIDHeader, log.TraceIDHeader,
 		},
 		ExposeHeaders: []string{
-			"Content-Length", commonauth.HeaderInternalUserID, commonauth.HeaderUserRole, log.RequestIDHeader,
+			"Content-Length", commonauth.HeaderInternalUserID, commonauth.HeaderUserRole,
+			log.RequestIDHeader, log.TraceIDHeader,
 		},
 		AllowCredentials: true,
 		MaxAge:           12 * time.Hour,

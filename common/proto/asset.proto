@@ -5,13 +5,30 @@ package assetpb;
 option go_package = "/assetpb;assetpb";
 
 service AssetService {
-  rpc SayHello (HelloRequest) returns (HelloResponse);
+  rpc Reward (RewardRequest) returns (RewardResponse);
 }
 
-message HelloRequest {
-  string name = 1;
+enum ErrorCode {
+  ERROR_CODE_UNSPECIFIED = 0;
+  ERROR_CODE_OK = 1;
+  ERROR_CODE_INVALID_ARGUMENT = 2;
+  ERROR_CODE_NOT_FOUND = 3;
+  ERROR_CODE_INTERNAL = 4;
 }
 
-message HelloResponse {
-  string message = 1;
+message BaseResponseInfo {
+  ErrorCode code = 1;
+  string message = 2;
+}
+
+message RewardRequest {
+  string biz_id = 1;
+  int64 user_id = 2;
+  string asset_code = 3;
+  string amount = 4;
+}
+
+message RewardResponse {
+  string transaction_id = 1;
+  BaseResponseInfo baseInfo = 255;
 }

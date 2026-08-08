@@ -17,3 +17,20 @@ system:
   - https://campaign-center-admin-web.vercel.app
   - https://finverse-web.vercel.app
   - http://localhost:3000
+
+payment_grpc:
+  host: "127.0.0.1"
+  port: 5002
+
+identity:
+  host: "127.0.0.1"
+  port: 5003
+
+kafka:
+  enabled: false
+  brokers:
+    - localhost:9092
+  group_id: asset-mservice
+  client_id: asset-mservice
+  topics:
+    - payment.transaction.updated

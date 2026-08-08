@@ -21,72 +21,84 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-type HelloRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
+type ErrorCode int32
 
-func (x *HelloRequest) Reset() {
-	*x = HelloRequest{}
-	mi := &file_proto_asset_proto_msgTypes[0]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
+const (
+	ErrorCode_ERROR_CODE_UNSPECIFIED      ErrorCode = 0
+	ErrorCode_ERROR_CODE_OK               ErrorCode = 1
+	ErrorCode_ERROR_CODE_INVALID_ARGUMENT ErrorCode = 2
+	ErrorCode_ERROR_CODE_NOT_FOUND        ErrorCode = 3
+	ErrorCode_ERROR_CODE_INTERNAL         ErrorCode = 4
+)
 
-func (x *HelloRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*HelloRequest) ProtoMessage() {}
-
-func (x *HelloRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_asset_proto_msgTypes[0]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
+// Enum value maps for ErrorCode.
+var (
+	ErrorCode_name = map[int32]string{
+		0: "ERROR_CODE_UNSPECIFIED",
+		1: "ERROR_CODE_OK",
+		2: "ERROR_CODE_INVALID_ARGUMENT",
+		3: "ERROR_CODE_NOT_FOUND",
+		4: "ERROR_CODE_INTERNAL",
 	}
-	return mi.MessageOf(x)
+	ErrorCode_value = map[string]int32{
+		"ERROR_CODE_UNSPECIFIED":      0,
+		"ERROR_CODE_OK":               1,
+		"ERROR_CODE_INVALID_ARGUMENT": 2,
+		"ERROR_CODE_NOT_FOUND":        3,
+		"ERROR_CODE_INTERNAL":         4,
+	}
+)
+
+func (x ErrorCode) Enum() *ErrorCode {
+	p := new(ErrorCode)
+	*p = x
+	return p
 }
 
-// Deprecated: Use HelloRequest.ProtoReflect.Descriptor instead.
-func (*HelloRequest) Descriptor() ([]byte, []int) {
+func (x ErrorCode) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (ErrorCode) Descriptor() protoreflect.EnumDescriptor {
+	return file_proto_asset_proto_enumTypes[0].Descriptor()
+}
+
+func (ErrorCode) Type() protoreflect.EnumType {
+	return &file_proto_asset_proto_enumTypes[0]
+}
+
+func (x ErrorCode) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use ErrorCode.Descriptor instead.
+func (ErrorCode) EnumDescriptor() ([]byte, []int) {
 	return file_proto_asset_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *HelloRequest) GetName() string {
-	if x != nil {
-		return x.Name
-	}
-	return ""
-}
-
-type HelloResponse struct {
+type BaseResponseInfo struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Message       string                 `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
+	Code          ErrorCode              `protobuf:"varint,1,opt,name=code,proto3,enum=assetpb.ErrorCode" json:"code,omitempty"`
+	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *HelloResponse) Reset() {
-	*x = HelloResponse{}
-	mi := &file_proto_asset_proto_msgTypes[1]
+func (x *BaseResponseInfo) Reset() {
+	*x = BaseResponseInfo{}
+	mi := &file_proto_asset_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *HelloResponse) String() string {
+func (x *BaseResponseInfo) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*HelloResponse) ProtoMessage() {}
+func (*BaseResponseInfo) ProtoMessage() {}
 
-func (x *HelloResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_asset_proto_msgTypes[1]
+func (x *BaseResponseInfo) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_asset_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -97,29 +109,170 @@ func (x *HelloResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use HelloResponse.ProtoReflect.Descriptor instead.
-func (*HelloResponse) Descriptor() ([]byte, []int) {
-	return file_proto_asset_proto_rawDescGZIP(), []int{1}
+// Deprecated: Use BaseResponseInfo.ProtoReflect.Descriptor instead.
+func (*BaseResponseInfo) Descriptor() ([]byte, []int) {
+	return file_proto_asset_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *HelloResponse) GetMessage() string {
+func (x *BaseResponseInfo) GetCode() ErrorCode {
+	if x != nil {
+		return x.Code
+	}
+	return ErrorCode_ERROR_CODE_UNSPECIFIED
+}
+
+func (x *BaseResponseInfo) GetMessage() string {
 	if x != nil {
 		return x.Message
 	}
 	return ""
 }
 
+type RewardRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	BizId         string                 `protobuf:"bytes,1,opt,name=biz_id,json=bizId,proto3" json:"biz_id,omitempty"`
+	UserId        int64                  `protobuf:"varint,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	AssetCode     string                 `protobuf:"bytes,3,opt,name=asset_code,json=assetCode,proto3" json:"asset_code,omitempty"`
+	Amount        string                 `protobuf:"bytes,4,opt,name=amount,proto3" json:"amount,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RewardRequest) Reset() {
+	*x = RewardRequest{}
+	mi := &file_proto_asset_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RewardRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RewardRequest) ProtoMessage() {}
+
+func (x *RewardRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_asset_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RewardRequest.ProtoReflect.Descriptor instead.
+func (*RewardRequest) Descriptor() ([]byte, []int) {
+	return file_proto_asset_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *RewardRequest) GetBizId() string {
+	if x != nil {
+		return x.BizId
+	}
+	return ""
+}
+
+func (x *RewardRequest) GetUserId() int64 {
+	if x != nil {
+		return x.UserId
+	}
+	return 0
+}
+
+func (x *RewardRequest) GetAssetCode() string {
+	if x != nil {
+		return x.AssetCode
+	}
+	return ""
+}
+
+func (x *RewardRequest) GetAmount() string {
+	if x != nil {
+		return x.Amount
+	}
+	return ""
+}
+
+type RewardResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	TransactionId string                 `protobuf:"bytes,1,opt,name=transaction_id,json=transactionId,proto3" json:"transaction_id,omitempty"`
+	BaseInfo      *BaseResponseInfo      `protobuf:"bytes,255,opt,name=baseInfo,proto3" json:"baseInfo,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RewardResponse) Reset() {
+	*x = RewardResponse{}
+	mi := &file_proto_asset_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RewardResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RewardResponse) ProtoMessage() {}
+
+func (x *RewardResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_proto_asset_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RewardResponse.ProtoReflect.Descriptor instead.
+func (*RewardResponse) Descriptor() ([]byte, []int) {
+	return file_proto_asset_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *RewardResponse) GetTransactionId() string {
+	if x != nil {
+		return x.TransactionId
+	}
+	return ""
+}
+
+func (x *RewardResponse) GetBaseInfo() *BaseResponseInfo {
+	if x != nil {
+		return x.BaseInfo
+	}
+	return nil
+}
+
 var File_proto_asset_proto protoreflect.FileDescriptor
 
 const file_proto_asset_proto_rawDesc = "" +
 	"\n" +
-	"\x11proto/asset.proto\x12\aassetpb\"\"\n" +
-	"\fHelloRequest\x12\x12\n" +
-	"\x04name\x18\x01 \x01(\tR\x04name\")\n" +
-	"\rHelloResponse\x12\x18\n" +
-	"\amessage\x18\x01 \x01(\tR\amessage2I\n" +
+	"\x11proto/asset.proto\x12\aassetpb\"T\n" +
+	"\x10BaseResponseInfo\x12&\n" +
+	"\x04code\x18\x01 \x01(\x0e2\x12.assetpb.ErrorCodeR\x04code\x12\x18\n" +
+	"\amessage\x18\x02 \x01(\tR\amessage\"v\n" +
+	"\rRewardRequest\x12\x15\n" +
+	"\x06biz_id\x18\x01 \x01(\tR\x05bizId\x12\x17\n" +
+	"\auser_id\x18\x02 \x01(\x03R\x06userId\x12\x1d\n" +
+	"\n" +
+	"asset_code\x18\x03 \x01(\tR\tassetCode\x12\x16\n" +
+	"\x06amount\x18\x04 \x01(\tR\x06amount\"o\n" +
+	"\x0eRewardResponse\x12%\n" +
+	"\x0etransaction_id\x18\x01 \x01(\tR\rtransactionId\x126\n" +
+	"\bbaseInfo\x18\xff\x01 \x01(\v2\x19.assetpb.BaseResponseInfoR\bbaseInfo*\x8e\x01\n" +
+	"\tErrorCode\x12\x1a\n" +
+	"\x16ERROR_CODE_UNSPECIFIED\x10\x00\x12\x11\n" +
+	"\rERROR_CODE_OK\x10\x01\x12\x1f\n" +
+	"\x1bERROR_CODE_INVALID_ARGUMENT\x10\x02\x12\x18\n" +
+	"\x14ERROR_CODE_NOT_FOUND\x10\x03\x12\x17\n" +
+	"\x13ERROR_CODE_INTERNAL\x10\x042I\n" +
 	"\fAssetService\x129\n" +
-	"\bSayHello\x12\x15.assetpb.HelloRequest\x1a\x16.assetpb.HelloResponseB\x12Z\x10/assetpb;assetpbb\x06proto3"
+	"\x06Reward\x12\x16.assetpb.RewardRequest\x1a\x17.assetpb.RewardResponseB\x12Z\x10/assetpb;assetpbb\x06proto3"
 
 var (
 	file_proto_asset_proto_rawDescOnce sync.Once
@@ -133,19 +286,24 @@ func file_proto_asset_proto_rawDescGZIP() []byte {
 	return file_proto_asset_proto_rawDescData
 }
 
-var file_proto_asset_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_proto_asset_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+var file_proto_asset_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
 var file_proto_asset_proto_goTypes = []any{
-	(*HelloRequest)(nil),  // 0: assetpb.HelloRequest
-	(*HelloResponse)(nil), // 1: assetpb.HelloResponse
+	(ErrorCode)(0),           // 0: assetpb.ErrorCode
+	(*BaseResponseInfo)(nil), // 1: assetpb.BaseResponseInfo
+	(*RewardRequest)(nil),    // 2: assetpb.RewardRequest
+	(*RewardResponse)(nil),   // 3: assetpb.RewardResponse
 }
 var file_proto_asset_proto_depIdxs = []int32{
-	0, // 0: assetpb.AssetService.SayHello:input_type -> assetpb.HelloRequest
-	1, // 1: assetpb.AssetService.SayHello:output_type -> assetpb.HelloResponse
-	1, // [1:2] is the sub-list for method output_type
-	0, // [0:1] is the sub-list for method input_type
-	0, // [0:0] is the sub-list for extension type_name
-	0, // [0:0] is the sub-list for extension extendee
-	0, // [0:0] is the sub-list for field type_name
+	0, // 0: assetpb.BaseResponseInfo.code:type_name -> assetpb.ErrorCode
+	1, // 1: assetpb.RewardResponse.baseInfo:type_name -> assetpb.BaseResponseInfo
+	2, // 2: assetpb.AssetService.Reward:input_type -> assetpb.RewardRequest
+	3, // 3: assetpb.AssetService.Reward:output_type -> assetpb.RewardResponse
+	3, // [3:4] is the sub-list for method output_type
+	2, // [2:3] is the sub-list for method input_type
+	2, // [2:2] is the sub-list for extension type_name
+	2, // [2:2] is the sub-list for extension extendee
+	0, // [0:2] is the sub-list for field type_name
 }
 
 func init() { file_proto_asset_proto_init() }
@@ -158,13 +316,14 @@ func file_proto_asset_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_proto_asset_proto_rawDesc), len(file_proto_asset_proto_rawDesc)),
-			NumEnums:      0,
-			NumMessages:   2,
+			NumEnums:      1,
+			NumMessages:   3,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
 		GoTypes:           file_proto_asset_proto_goTypes,
 		DependencyIndexes: file_proto_asset_proto_depIdxs,
+		EnumInfos:         file_proto_asset_proto_enumTypes,
 		MessageInfos:      file_proto_asset_proto_msgTypes,
 	}.Build()
 	File_proto_asset_proto = out.File
