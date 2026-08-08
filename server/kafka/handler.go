@@ -19,10 +19,11 @@ func RegisterHandler(topic string, handler Handler) {
 }
 
 // HandlersForTopic returns registered handlers for a topic.
+// Incoming Kafka topics may include KAFKA_TOPIC_PREFIX; lookup uses the logical name.
 func HandlersForTopic(topic string) []Handler {
 	handlerMu.RLock()
 	defer handlerMu.RUnlock()
-	hs := handlers[topic]
+	hs := handlers[LogicalTopic(topic)]
 	if len(hs) == 0 {
 		return nil
 	}
