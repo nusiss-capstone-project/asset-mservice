@@ -11,7 +11,8 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-type HoldingService interface {
+// ListHoldingser lists user asset holdings.
+type ListHoldingser interface {
 	ListHoldings(ctx context.Context, userID, assetID int64) (*data.HoldingListVO, error)
 }
 
@@ -22,10 +23,10 @@ type HoldingServiceImpl struct {
 
 var (
 	holdingServiceOnce sync.Once
-	holdingServiceInst HoldingService
+	holdingServiceInst ListHoldingser
 )
 
-func GetHoldingService() HoldingService {
+func GetHoldingService() ListHoldingser {
 	holdingServiceOnce.Do(func() {
 		holdingServiceInst = &HoldingServiceImpl{
 			holdingDao: dao.GetUserAssetHoldingDao(),

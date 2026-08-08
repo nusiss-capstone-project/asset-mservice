@@ -32,7 +32,8 @@ type RewardResult struct {
 	TransactionID string // ledger_no
 }
 
-type RewardService interface {
+// Rewarder credits asset holdings for reward business events.
+type Rewarder interface {
 	Reward(ctx context.Context, in RewardInput) (*RewardResult, error)
 }
 
@@ -44,10 +45,10 @@ type RewardServiceImpl struct {
 
 var (
 	rewardServiceOnce sync.Once
-	rewardServiceInst RewardService
+	rewardServiceInst Rewarder
 )
 
-func GetRewardService() RewardService {
+func GetRewardService() Rewarder {
 	rewardServiceOnce.Do(func() {
 		rewardServiceInst = &RewardServiceImpl{
 			assetDao:   dao.GetAssetDao(),
@@ -59,20 +60,9 @@ func GetRewardService() RewardService {
 }
 
 func (s *RewardServiceImpl) Reward(ctx context.Context, in RewardInput) (*RewardResult, error) {
-	bizID := strings.TrimSpace(in.BizID)
-	assetCode := strings.ToUpper(strings.TrimSpace(in.AssetCode))
-	if bizID == "" {
-		return nil, fmt.Errorf("%w: biz_id is required", ErrRewardInvalidArgument)
-	}
-	if in.UserID <= 0 {
-		return nil, fmt.Errorf("%w: user_id is required", ErrRewardInvalidArgument)
-	}
-	if assetCode == "" {
-		return nil, fmt.Errorf("%w: asset_code is required", ErrRewardInvalidArgument)
-	}
-	amount, err := decimal.NewFromString(strings.TrimSpace(in.Amount))
-	if err != nil || !amount.IsPositive() {
-		return nil, fmt.Errorf("%w: invalid amount", ErrRewardInvalidArgument)
+	bizID, assetCode, amount, err := parseRewardInput(in)
+	if err != nil {
+		return nil, err
 	}
 
 	existing, err := s.ledgerDao.GetByBusinessKey(ctx, nil, model.LedgerBusinessTypeReward, bizID, assetCode)
@@ -88,6 +78,38 @@ func (s *RewardServiceImpl) Reward(ctx context.Context, in RewardInput) (*Reward
 		return &RewardResult{TransactionID: existing.LedgerNo}, nil
 	}
 
+	asset, err := s.loadActiveRewardAsset(ctx, assetCode)
+	if err != nil {
+		return nil, err
+	}
+
+	ledgerNo, err := s.creditReward(ctx, in.UserID, bizID, assetCode, asset.ID, amount)
+	if err != nil {
+		return s.rewardOnDuplicate(ctx, bizID, assetCode, err)
+	}
+	return &RewardResult{TransactionID: ledgerNo}, nil
+}
+
+func parseRewardInput(in RewardInput) (bizID, assetCode string, amount decimal.Decimal, err error) {
+	bizID = strings.TrimSpace(in.BizID)
+	assetCode = strings.ToUpper(strings.TrimSpace(in.AssetCode))
+	if bizID == "" {
+		return "", "", decimal.Zero, fmt.Errorf("%w: biz_id is required", ErrRewardInvalidArgument)
+	}
+	if in.UserID <= 0 {
+		return "", "", decimal.Zero, fmt.Errorf("%w: user_id is required", ErrRewardInvalidArgument)
+	}
+	if assetCode == "" {
+		return "", "", decimal.Zero, fmt.Errorf("%w: asset_code is required", ErrRewardInvalidArgument)
+	}
+	amount, err = decimal.NewFromString(strings.TrimSpace(in.Amount))
+	if err != nil || !amount.IsPositive() {
+		return "", "", decimal.Zero, fmt.Errorf("%w: invalid amount", ErrRewardInvalidArgument)
+	}
+	return bizID, assetCode, amount, nil
+}
+
+func (s *RewardServiceImpl) loadActiveRewardAsset(ctx context.Context, assetCode string) (*model.Asset, error) {
 	asset, err := s.assetDao.GetBySymbol(ctx, assetCode)
 	if err != nil {
 		return nil, err
@@ -98,10 +120,15 @@ func (s *RewardServiceImpl) Reward(ctx context.Context, in RewardInput) (*Reward
 	if asset.Status != model.AssetStatusActive {
 		return nil, fmt.Errorf("%w: asset %s is not active", ErrRewardInvalidArgument, assetCode)
 	}
+	return asset, nil
+}
 
+func (s *RewardServiceImpl) creditReward(
+	ctx context.Context, userID int64, bizID, assetCode string, assetID int64, amount decimal.Decimal,
+) (string, error) {
 	var ledgerNo string
-	err = repository.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		balanceAfter, err := s.holdingDao.UpsertAddQuantity(ctx, tx, in.UserID, asset.ID, amount)
+	err := repository.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		balanceAfter, err := s.holdingDao.UpsertAddQuantity(ctx, tx, userID, assetID, amount)
 		if err != nil {
 			return err
 		}
@@ -109,29 +136,30 @@ func (s *RewardServiceImpl) Reward(ctx context.Context, in RewardInput) (*Reward
 		if err != nil {
 			return err
 		}
-		ledger := &model.AccountLedger{
+		return s.ledgerDao.Create(ctx, tx, &model.AccountLedger{
 			LedgerNo:     ledgerNo,
-			UserID:       in.UserID,
+			UserID:       userID,
 			AssetCode:    assetCode,
 			ChangeAmount: amount,
 			BusinessType: model.LedgerBusinessTypeReward,
 			BusinessID:   bizID,
 			BalanceAfter: balanceAfter,
-		}
-		return s.ledgerDao.Create(ctx, tx, ledger)
+		})
 	})
-	if err != nil {
-		// Concurrent reward: unique key conflict rolls back holding+ledger; return existing.
-		if errors.Is(err, gorm.ErrDuplicatedKey) {
-			existing, lookupErr := s.ledgerDao.GetByBusinessKey(ctx, nil, model.LedgerBusinessTypeReward, bizID, assetCode)
-			if lookupErr != nil {
-				return nil, lookupErr
-			}
-			if existing != nil {
-				return &RewardResult{TransactionID: existing.LedgerNo}, nil
-			}
-		}
+	return ledgerNo, err
+}
+
+func (s *RewardServiceImpl) rewardOnDuplicate(ctx context.Context, bizID, assetCode string, err error) (*RewardResult, error) {
+	// Concurrent reward: unique key conflict rolls back holding+ledger; return existing.
+	if !errors.Is(err, gorm.ErrDuplicatedKey) {
 		return nil, err
 	}
-	return &RewardResult{TransactionID: ledgerNo}, nil
+	existing, lookupErr := s.ledgerDao.GetByBusinessKey(ctx, nil, model.LedgerBusinessTypeReward, bizID, assetCode)
+	if lookupErr != nil {
+		return nil, lookupErr
+	}
+	if existing != nil {
+		return &RewardResult{TransactionID: existing.LedgerNo}, nil
+	}
+	return nil, err
 }

@@ -62,6 +62,23 @@ func TestCreateDeposit_ValidationErrors(t *testing.T) {
 	require.ErrorContains(t, err, "invalid amount")
 }
 
+func TestCreateDeposit_RejectsTooManyDecimalPlaces(t *testing.T) {
+	initServiceTestEnv(t)
+	fiatTxnDao := new(daomocks.FiatTransactionDao)
+	userProxy := new(proxymocks.UserProxy)
+	svc := newDepositServiceForTest(
+		fiatTxnDao, new(daomocks.UserFiatAccountDao), new(daomocks.AccountLedgerDao),
+		userProxy, new(proxymocks.PaymentProxy), new(producermocks.DepositPaymentResultProducer),
+	)
+	fiatTxnDao.On("GetByIdempotentKey", mock.Anything, int64(1), "k").Return(nil, nil)
+	userProxy.On("GetUserProfile", mock.Anything, int64(1)).Return(sampleProfile("SG"), nil)
+
+	_, err := svc.CreateDeposit(context.Background(), 1, &data.CreateDepositRequest{
+		IdempotentKey: "k", PaymentMethodID: 1, Currency: "USD", Amount: "0.009",
+	})
+	require.ErrorContains(t, err, "too many decimal places")
+}
+
 func TestCreateDeposit_IdempotentHit(t *testing.T) {
 	initServiceTestEnv(t)
 	fiatTxnDao := new(daomocks.FiatTransactionDao)
@@ -82,6 +99,33 @@ func TestCreateDeposit_IdempotentHit(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "9", vo.TransactionID)
 	require.Equal(t, model.FiatTxnStatusSucceeded, vo.Status)
+}
+
+func TestCreateDeposit_IdempotentRaceOnCreate(t *testing.T) {
+	initServiceTestEnv(t)
+	fiatTxnDao := new(daomocks.FiatTransactionDao)
+	userProxy := new(proxymocks.UserProxy)
+	svc := newDepositServiceForTest(
+		fiatTxnDao, new(daomocks.UserFiatAccountDao), new(daomocks.AccountLedgerDao),
+		userProxy, new(proxymocks.PaymentProxy), new(producermocks.DepositPaymentResultProducer),
+	)
+	existing := &model.FiatTransaction{
+		ID: 11, UserID: 42, TransactionNo: "FT11", Currency: "USD",
+		Amount: decimal.RequireFromString("10.00"), Status: model.FiatTxnStatusPending,
+		IdempotentKey: "idem-race", CreatedAt: time.Now(), UpdatedAt: time.Now(),
+	}
+	fiatTxnDao.On("GetByIdempotentKey", mock.Anything, int64(42), "idem-race").Return(nil, nil).Once()
+	userProxy.On("GetUserProfile", mock.Anything, int64(42)).Return(sampleProfile("SG"), nil)
+	fiatTxnDao.On("Create", mock.Anything, (*gorm.DB)(nil), mock.AnythingOfType("*model.FiatTransaction")).
+		Return(gorm.ErrDuplicatedKey)
+	fiatTxnDao.On("GetByIdempotentKey", mock.Anything, int64(42), "idem-race").Return(existing, nil).Once()
+
+	vo, err := svc.CreateDeposit(context.Background(), 42, &data.CreateDepositRequest{
+		IdempotentKey: "idem-race", PaymentMethodID: 1, Currency: "USD", Amount: "10.00",
+	})
+	require.NoError(t, err)
+	require.Equal(t, "11", vo.TransactionID)
+	require.Equal(t, model.FiatTxnStatusPending, vo.Status)
 }
 
 func TestCreateDeposit_UnsupportedCurrency(t *testing.T) {

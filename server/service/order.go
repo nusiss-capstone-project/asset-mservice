@@ -345,64 +345,25 @@ func (s *OrderServiceImpl) HandlePaymentResult(ctx context.Context, in PaymentRe
 
 func (s *OrderServiceImpl) applyPaymentResult(ctx context.Context, order *model.AssetOrder, paymentID, status string) error {
 	if status != model.OrderStatusPaySucceed {
-		rows, err := s.orderDao.UpdatePaymentResult(ctx, nil, order.ID, paymentID, model.OrderStatusPending, status)
-		if err != nil {
-			return err
-		}
-		if rows == 0 {
-			return nil
-		}
-		return s.publishOrderPaymentResult(ctx, order, paymentID, status)
+		return s.markOrderNotSucceeded(ctx, order, paymentID, status)
 	}
+	return s.settleSucceededOrder(ctx, order, paymentID)
+}
 
-	err := repository.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		rows, err := s.orderDao.UpdatePaymentResult(ctx, tx, order.ID, paymentID, model.OrderStatusPending, model.OrderStatusPaySucceed)
-		if err != nil {
-			return err
-		}
-		if rows == 0 {
-			log.WithContext(ctx).Infow("order already settled, skip holding update",
-				"order_id", order.ID,
-				"order_no", order.OrderNo,
-				"payment_id", paymentID,
-			)
-			return errOrderAlreadySettled
-		}
-		balanceAfter, err := s.holdingDao.UpsertAddQuantity(ctx, tx, order.UserID, order.AssetID, order.Quantity)
-		if err != nil {
-			return err
-		}
-		asset, err := s.assetDao.GetByID(ctx, order.AssetID)
-		if err != nil {
-			return err
-		}
-		if asset == nil {
-			return fmt.Errorf("asset not found: %d", order.AssetID)
-		}
-		ledgerNo, err := util.NewLedgerNo()
-		if err != nil {
-			return err
-		}
-		ledger := &model.AccountLedger{
-			LedgerNo:     ledgerNo,
-			UserID:       order.UserID,
-			AssetCode:    asset.Symbol,
-			ChangeAmount: order.Quantity,
-			BusinessType: model.LedgerBusinessTypePurchase,
-			BusinessID:   order.OrderNo,
-			BalanceAfter: balanceAfter,
-		}
-		if err := s.ledgerDao.Create(ctx, tx, ledger); err != nil {
-			return err
-		}
-		log.WithContext(ctx).Infow("order settled successfully",
-			"order_id", order.ID,
-			"order_no", order.OrderNo,
-			"payment_id", paymentID,
-			"asset_id", order.AssetID,
-			"quantity", order.Quantity.String(),
-		)
+func (s *OrderServiceImpl) markOrderNotSucceeded(ctx context.Context, order *model.AssetOrder, paymentID, status string) error {
+	rows, err := s.orderDao.UpdatePaymentResult(ctx, nil, order.ID, paymentID, model.OrderStatusPending, status)
+	if err != nil {
+		return err
+	}
+	if rows == 0 {
 		return nil
+	}
+	return s.publishOrderPaymentResult(ctx, order, paymentID, status)
+}
+
+func (s *OrderServiceImpl) settleSucceededOrder(ctx context.Context, order *model.AssetOrder, paymentID string) error {
+	err := repository.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		return s.creditOrderInTx(ctx, tx, order, paymentID)
 	})
 	if err != nil {
 		if errors.Is(err, errOrderAlreadySettled) {
@@ -411,6 +372,55 @@ func (s *OrderServiceImpl) applyPaymentResult(ctx context.Context, order *model.
 		return err
 	}
 	return s.publishOrderPaymentResult(ctx, order, paymentID, model.OrderStatusPaySucceed)
+}
+
+func (s *OrderServiceImpl) creditOrderInTx(ctx context.Context, tx *gorm.DB, order *model.AssetOrder, paymentID string) error {
+	rows, err := s.orderDao.UpdatePaymentResult(ctx, tx, order.ID, paymentID, model.OrderStatusPending, model.OrderStatusPaySucceed)
+	if err != nil {
+		return err
+	}
+	if rows == 0 {
+		log.WithContext(ctx).Infow("order already settled, skip holding update",
+			"order_id", order.ID,
+			"order_no", order.OrderNo,
+			"payment_id", paymentID,
+		)
+		return errOrderAlreadySettled
+	}
+	balanceAfter, err := s.holdingDao.UpsertAddQuantity(ctx, tx, order.UserID, order.AssetID, order.Quantity)
+	if err != nil {
+		return err
+	}
+	asset, err := s.assetDao.GetByID(ctx, order.AssetID)
+	if err != nil {
+		return err
+	}
+	if asset == nil {
+		return fmt.Errorf("asset not found: %d", order.AssetID)
+	}
+	ledgerNo, err := util.NewLedgerNo()
+	if err != nil {
+		return err
+	}
+	if err := s.ledgerDao.Create(ctx, tx, &model.AccountLedger{
+		LedgerNo:     ledgerNo,
+		UserID:       order.UserID,
+		AssetCode:    asset.Symbol,
+		ChangeAmount: order.Quantity,
+		BusinessType: model.LedgerBusinessTypePurchase,
+		BusinessID:   order.OrderNo,
+		BalanceAfter: balanceAfter,
+	}); err != nil {
+		return err
+	}
+	log.WithContext(ctx).Infow("order settled successfully",
+		"order_id", order.ID,
+		"order_no", order.OrderNo,
+		"payment_id", paymentID,
+		"asset_id", order.AssetID,
+		"quantity", order.Quantity.String(),
+	)
+	return nil
 }
 
 var errOrderAlreadySettled = errors.New("order already settled")

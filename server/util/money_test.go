@@ -17,4 +17,7 @@ func TestToMinorUnits(t *testing.T) {
 	if got != 100 {
 		t.Fatalf("got %d want 100", got)
 	}
+	if _, err = ToMinorUnits("0.009", "USD"); err == nil {
+		t.Fatal("expected too many decimal places error")
+	}
 }

@@ -16,7 +16,8 @@ import (
 	"github.com/nusiss-capstone-project/asset-mservice/server/util"
 )
 
-type QuoteService interface {
+// GenQuoter generates a short-lived quote for an asset.
+type GenQuoter interface {
 	GenQuote(ctx context.Context, userID int64, req *data.GenQuoteRequest) (*data.QuoteVO, error)
 }
 
@@ -26,10 +27,10 @@ type QuoteServiceImpl struct {
 
 var (
 	quoteServiceOnce sync.Once
-	quoteServiceInst QuoteService
+	quoteServiceInst GenQuoter
 )
 
-func GetQuoteService() QuoteService {
+func GetQuoteService() GenQuoter {
 	quoteServiceOnce.Do(func() {
 		quoteServiceInst = &QuoteServiceImpl{
 			assetDao: dao.GetAssetDao(),

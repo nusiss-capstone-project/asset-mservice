@@ -67,20 +67,9 @@ func GetDepositService() DepositService {
 }
 
 func (s *DepositServiceImpl) CreateDeposit(ctx context.Context, userID int64, req *data.CreateDepositRequest) (*data.FiatTransactionVO, error) {
-	idempotentKey := strings.TrimSpace(req.IdempotentKey)
-	currency := strings.ToUpper(strings.TrimSpace(req.Currency))
-	if idempotentKey == "" {
-		return nil, fmt.Errorf("idempotent_key is required")
-	}
-	if req.PaymentMethodID <= 0 {
-		return nil, fmt.Errorf("payment_method_id is required")
-	}
-	if currency == "" {
-		return nil, fmt.Errorf("currency is required")
-	}
-	amount, err := decimal.NewFromString(strings.TrimSpace(req.Amount))
-	if err != nil || !amount.IsPositive() {
-		return nil, fmt.Errorf("invalid amount")
+	idempotentKey, currency, amount, err := parseCreateDepositRequest(req)
+	if err != nil {
+		return nil, err
 	}
 
 	existing, err := s.fiatTxnDao.GetByIdempotentKey(ctx, userID, idempotentKey)
@@ -91,35 +80,18 @@ func (s *DepositServiceImpl) CreateDeposit(ctx context.Context, userID int64, re
 		return toFiatTransactionVO(existing), nil
 	}
 
-	profile, err := s.userProxy.GetUserProfile(ctx, userID)
-	if err != nil {
+	if err := s.ensureDepositCurrencyAllowed(ctx, userID, currency); err != nil {
 		return nil, err
 	}
-	if !market.SupportsCurrency(profile.GetMarket(), currency) {
-		return nil, fmt.Errorf("currency %s is not supported for market %s", currency, profile.GetMarket())
-	}
 
-	minorAmount, err := util.ToMinorUnits(amount.StringFixed(2), currency)
+	minorAmount, err := util.ToMinorUnits(strings.TrimSpace(req.Amount), currency)
 	if err != nil {
 		return nil, err
 	}
 
-	txnNo, err := util.NewFiatTransactionNo()
+	txn, err := s.createPendingDeposit(ctx, userID, idempotentKey, currency, amount, req.PaymentMethodID)
 	if err != nil {
-		return nil, err
-	}
-	txn := &model.FiatTransaction{
-		TransactionNo:   txnNo,
-		UserID:          userID,
-		IdempotentKey:   idempotentKey,
-		Amount:          amount,
-		Currency:        currency,
-		TransactionType: model.FiatTxnTypeDeposit,
-		Status:          model.FiatTxnStatusPending,
-		PaymentMethodID: req.PaymentMethodID,
-	}
-	if err := s.fiatTxnDao.Create(ctx, nil, txn); err != nil {
-		return nil, err
+		return s.createDepositOnDuplicate(ctx, userID, idempotentKey, err)
 	}
 
 	payResult, err := s.paymentProxy.CreatePayment(ctx, proxy.CreatePaymentRequest{
@@ -129,7 +101,6 @@ func (s *DepositServiceImpl) CreateDeposit(ctx context.Context, userID int64, re
 		Currency:        currency,
 		PaymentMethodID: req.PaymentMethodID,
 	})
-
 	if err != nil {
 		_ = s.applyDepositPaymentResult(ctx, txn, "", model.FiatTxnStatusFailed, err.Error())
 		log.WithContext(ctx).Errorw("create payment failed",
@@ -140,8 +111,7 @@ func (s *DepositServiceImpl) CreateDeposit(ctx context.Context, userID int64, re
 		return nil, err
 	}
 
-	targetStatus := mapDepositPaymentStatus(payResult.Status)
-	if err := s.applyDepositPaymentResult(ctx, txn, payResult.PaymentID, targetStatus, ""); err != nil {
+	if err := s.applyDepositPaymentResult(ctx, txn, payResult.PaymentID, mapDepositPaymentStatus(payResult.Status), ""); err != nil {
 		return nil, err
 	}
 
@@ -155,64 +125,112 @@ func (s *DepositServiceImpl) CreateDeposit(ctx context.Context, userID int64, re
 	return toFiatTransactionVO(latest), nil
 }
 
+func parseCreateDepositRequest(req *data.CreateDepositRequest) (idempotentKey, currency string, amount decimal.Decimal, err error) {
+	idempotentKey = strings.TrimSpace(req.IdempotentKey)
+	currency = strings.ToUpper(strings.TrimSpace(req.Currency))
+	if idempotentKey == "" {
+		return "", "", decimal.Zero, fmt.Errorf("idempotent_key is required")
+	}
+	if req.PaymentMethodID <= 0 {
+		return "", "", decimal.Zero, fmt.Errorf("payment_method_id is required")
+	}
+	if currency == "" {
+		return "", "", decimal.Zero, fmt.Errorf("currency is required")
+	}
+	amount, err = decimal.NewFromString(strings.TrimSpace(req.Amount))
+	if err != nil || !amount.IsPositive() {
+		return "", "", decimal.Zero, fmt.Errorf("invalid amount")
+	}
+	return idempotentKey, currency, amount, nil
+}
+
+func (s *DepositServiceImpl) ensureDepositCurrencyAllowed(ctx context.Context, userID int64, currency string) error {
+	profile, err := s.userProxy.GetUserProfile(ctx, userID)
+	if err != nil {
+		return err
+	}
+	if !market.SupportsCurrency(profile.GetMarket(), currency) {
+		return fmt.Errorf("currency %s is not supported for market %s", currency, profile.GetMarket())
+	}
+	return nil
+}
+
+func (s *DepositServiceImpl) createPendingDeposit(
+	ctx context.Context, userID int64, idempotentKey, currency string, amount decimal.Decimal, paymentMethodID int64,
+) (*model.FiatTransaction, error) {
+	txnNo, err := util.NewFiatTransactionNo()
+	if err != nil {
+		return nil, err
+	}
+	txn := &model.FiatTransaction{
+		TransactionNo:   txnNo,
+		UserID:          userID,
+		IdempotentKey:   idempotentKey,
+		Amount:          amount,
+		Currency:        currency,
+		TransactionType: model.FiatTxnTypeDeposit,
+		Status:          model.FiatTxnStatusPending,
+		PaymentMethodID: paymentMethodID,
+	}
+	if err := s.fiatTxnDao.Create(ctx, nil, txn); err != nil {
+		return nil, err
+	}
+	return txn, nil
+}
+
+func (s *DepositServiceImpl) createDepositOnDuplicate(
+	ctx context.Context, userID int64, idempotentKey string, err error,
+) (*data.FiatTransactionVO, error) {
+	if !errors.Is(err, gorm.ErrDuplicatedKey) {
+		return nil, err
+	}
+	existing, lookupErr := s.fiatTxnDao.GetByIdempotentKey(ctx, userID, idempotentKey)
+	if lookupErr != nil {
+		return nil, lookupErr
+	}
+	if existing != nil {
+		return toFiatTransactionVO(existing), nil
+	}
+	return nil, err
+}
+
 func (s *DepositServiceImpl) applyDepositPaymentResult(
 	ctx context.Context,
 	txn *model.FiatTransaction,
 	paymentID, status, failureReason string,
 ) error {
 	if status != model.FiatTxnStatusSucceeded {
-		rows, err := s.fiatTxnDao.UpdatePaymentResult(
-			ctx, nil, txn.ID, paymentID, model.FiatTxnStatusPending, status, failureReason,
-		)
-		if err != nil {
-			return err
-		}
-		if rows == 0 {
-			return nil
-		}
-		log.WithContext(ctx).Infow("update payment result success",
-			"user_id", txn.UserID,
-			"transaction_no", txn.TransactionNo,
-			"payment_id", paymentID,
-			"status", status,
-			"failure_reason", failureReason,
-		)
-		return s.publishDepositPaymentResult(ctx, txn, status)
+		return s.markDepositNotSucceeded(ctx, txn, paymentID, status, failureReason)
 	}
+	return s.settleSucceededDeposit(ctx, txn, paymentID)
+}
 
+func (s *DepositServiceImpl) markDepositNotSucceeded(
+	ctx context.Context, txn *model.FiatTransaction, paymentID, status, failureReason string,
+) error {
+	rows, err := s.fiatTxnDao.UpdatePaymentResult(
+		ctx, nil, txn.ID, paymentID, model.FiatTxnStatusPending, status, failureReason,
+	)
+	if err != nil {
+		return err
+	}
+	if rows == 0 {
+		return nil
+	}
+	log.WithContext(ctx).Infow("update payment result success",
+		"user_id", txn.UserID,
+		"transaction_no", txn.TransactionNo,
+		"payment_id", paymentID,
+		"status", status,
+		"failure_reason", failureReason,
+	)
+	return s.publishDepositPaymentResult(ctx, txn, status)
+}
+
+func (s *DepositServiceImpl) settleSucceededDeposit(ctx context.Context, txn *model.FiatTransaction, paymentID string) error {
 	var accountID int64
 	err := repository.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		rows, err := s.fiatTxnDao.UpdatePaymentResult(
-			ctx, tx, txn.ID, paymentID, model.FiatTxnStatusPending, model.FiatTxnStatusSucceeded, "",
-		)
-		if err != nil {
-			return err
-		}
-		if rows == 0 {
-			return errDepositAlreadySettled
-		}
-		balanceAfter, acctID, err := s.fiatAccountDao.UpsertAddBalance(ctx, tx, txn.UserID, txn.Currency, txn.Amount)
-		if err != nil {
-			return err
-		}
-		accountID = acctID
-		if err := s.fiatTxnDao.UpdateAccountID(ctx, tx, txn.ID, accountID); err != nil {
-			return err
-		}
-		ledgerNo, err := util.NewLedgerNo()
-		if err != nil {
-			return err
-		}
-		ledger := &model.AccountLedger{
-			LedgerNo:     ledgerNo,
-			UserID:       txn.UserID,
-			AssetCode:    txn.Currency,
-			ChangeAmount: txn.Amount,
-			BusinessType: model.LedgerBusinessTypeDeposit,
-			BusinessID:   txn.TransactionNo,
-			BalanceAfter: balanceAfter,
-		}
-		return s.ledgerDao.Create(ctx, tx, ledger)
+		return s.creditDepositInTx(ctx, tx, txn, paymentID, &accountID)
 	})
 	if err != nil {
 		if errors.Is(err, errDepositAlreadySettled) {
@@ -224,6 +242,41 @@ func (s *DepositServiceImpl) applyDepositPaymentResult(
 	txn.ExternalPaymentID = paymentID
 	txn.Status = model.FiatTxnStatusSucceeded
 	return s.publishDepositPaymentResult(ctx, txn, model.FiatTxnStatusSucceeded)
+}
+
+func (s *DepositServiceImpl) creditDepositInTx(
+	ctx context.Context, tx *gorm.DB, txn *model.FiatTransaction, paymentID string, accountID *int64,
+) error {
+	rows, err := s.fiatTxnDao.UpdatePaymentResult(
+		ctx, tx, txn.ID, paymentID, model.FiatTxnStatusPending, model.FiatTxnStatusSucceeded, "",
+	)
+	if err != nil {
+		return err
+	}
+	if rows == 0 {
+		return errDepositAlreadySettled
+	}
+	balanceAfter, acctID, err := s.fiatAccountDao.UpsertAddBalance(ctx, tx, txn.UserID, txn.Currency, txn.Amount)
+	if err != nil {
+		return err
+	}
+	*accountID = acctID
+	if err := s.fiatTxnDao.UpdateAccountID(ctx, tx, txn.ID, acctID); err != nil {
+		return err
+	}
+	ledgerNo, err := util.NewLedgerNo()
+	if err != nil {
+		return err
+	}
+	return s.ledgerDao.Create(ctx, tx, &model.AccountLedger{
+		LedgerNo:     ledgerNo,
+		UserID:       txn.UserID,
+		AssetCode:    txn.Currency,
+		ChangeAmount: txn.Amount,
+		BusinessType: model.LedgerBusinessTypeDeposit,
+		BusinessID:   txn.TransactionNo,
+		BalanceAfter: balanceAfter,
+	})
 }
 
 var errDepositAlreadySettled = errors.New("deposit already settled")
@@ -264,30 +317,35 @@ func (s *DepositServiceImpl) ListFiatAccounts(ctx context.Context, userID int64,
 		return nil, err
 	}
 
-	wanted := supported
-	if filter := strings.TrimSpace(currenciesFilter); filter != "" {
-		wanted = nil
-		for _, part := range strings.Split(filter, ",") {
-			c := strings.ToUpper(strings.TrimSpace(part))
-			if c == "" {
-				continue
-			}
-			if !market.SupportsCurrency(profile.GetMarket(), c) {
-				continue
-			}
-			wanted = append(wanted, c)
-		}
-	}
-
+	wanted := filterFiatCurrencies(profile.GetMarket(), supported, currenciesFilter)
 	accounts, err := s.fiatAccountDao.ListByUser(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
+	return &data.FiatAccountListVO{Items: buildFiatAccountItems(wanted, accounts)}, nil
+}
+
+func filterFiatCurrencies(marketCode string, supported []string, currenciesFilter string) []string {
+	filter := strings.TrimSpace(currenciesFilter)
+	if filter == "" {
+		return supported
+	}
+	wanted := make([]string, 0)
+	for _, part := range strings.Split(filter, ",") {
+		c := strings.ToUpper(strings.TrimSpace(part))
+		if c == "" || !market.SupportsCurrency(marketCode, c) {
+			continue
+		}
+		wanted = append(wanted, c)
+	}
+	return wanted
+}
+
+func buildFiatAccountItems(wanted []string, accounts []*model.UserFiatAccount) []*data.FiatAccountVO {
 	byCurrency := make(map[string]*model.UserFiatAccount, len(accounts))
 	for _, a := range accounts {
 		byCurrency[a.Currency] = a
 	}
-
 	items := make([]*data.FiatAccountVO, 0, len(wanted))
 	for _, currency := range wanted {
 		if a, ok := byCurrency[currency]; ok {
@@ -306,7 +364,7 @@ func (s *DepositServiceImpl) ListFiatAccounts(ctx context.Context, userID int64,
 			UpdatedAt: 0,
 		})
 	}
-	return &data.FiatAccountListVO{Items: items}, nil
+	return items
 }
 
 func (s *DepositServiceImpl) ListLedgers(ctx context.Context, query ListLedgersQuery) (*data.LedgerListVO, error) {
