@@ -9,7 +9,7 @@ require (
 	github.com/nusiss-capstone-project/asset-mservice/common v0.0.2
 	github.com/nusiss-capstone-project/identity-mservice/client v0.0.3
 	github.com/nusiss-capstone-project/identity-mservice/common v0.0.3-alpha1
-	github.com/nusiss-capstone-project/payment-mservice/client v0.0.1
+	github.com/nusiss-capstone-project/payment-mservice/client v0.0.2
 	github.com/nusiss-capstone-project/payment-mservice/common v0.0.2-alpha.1
 	github.com/redis/go-redis/v9 v9.7.3
 	github.com/shopspring/decimal v1.4.0
