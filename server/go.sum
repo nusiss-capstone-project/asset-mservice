@@ -127,8 +127,8 @@ github.com/nusiss-capstone-project/identity-mservice/client v0.0.3 h1:8TZwAfYMDW
 github.com/nusiss-capstone-project/identity-mservice/client v0.0.3/go.mod h1:bgXnM7DkNTnXaj5mvHoU58hP/iDxPvt3SEA5KbAlMFQ=
 github.com/nusiss-capstone-project/identity-mservice/common v0.0.3-alpha1 h1:CpTjzbi2eSPj80DSIs/5bYyxIsX5uZzzda3Ak30vrnM=
 github.com/nusiss-capstone-project/identity-mservice/common v0.0.3-alpha1/go.mod h1:NI9LLqL+frasX8a7FHcbgbWsddF7FzJf4SkPWzdPgUU=
-github.com/nusiss-capstone-project/payment-mservice/client v0.0.2 h1:YlcrXJ7tSogmYQRZEd2ua9GGs+UDpL2N/lAZa/wkkng=
-github.com/nusiss-capstone-project/payment-mservice/client v0.0.2/go.mod h1:bPVY2UuUgO+jhKnVZ8w7jOgkn8YdLDOyB+ynn6M9KDQ=
+github.com/nusiss-capstone-project/payment-mservice/client v0.0.3 h1:M1/lo7TThvEm6E53e/KAL/hc6fuV89yFfdrRcsis2oQ=
+github.com/nusiss-capstone-project/payment-mservice/client v0.0.3/go.mod h1:9aLagjfCd8JDMfbEnAiX/uN3b7GEMnhwdHTiBEUbtBk=
 github.com/nusiss-capstone-project/payment-mservice/common v0.0.2-alpha.1 h1:fZV6NzSdGARpk/dchoLmkybCKXN5UkNNKLP+Rql1z0E=
 github.com/nusiss-capstone-project/payment-mservice/common v0.0.2-alpha.1/go.mod h1:AUkbe0vn8KxFJHQ+VJWu7wYK9Njubn1nyD7Grh5FBpE=
 github.com/pelletier/go-toml/v2 v2.3.0 h1:k59bC/lIZREW0/iVaQR8nDHxVq8OVlIzYCOJf421CaM=
